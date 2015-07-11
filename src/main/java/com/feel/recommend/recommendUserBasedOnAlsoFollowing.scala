@@ -7,16 +7,16 @@ package com.feel.recommend
 import org.apache.spark.{SparkConf, SparkContext}
 import org.elasticsearch.spark._
 
-case class userRecommend(user: String, userCandidates: Seq[String])
+case class alsoFlowingUserRecommend(user: String, candidates: Seq[String])
 
 object recommendUserBasedOnAlsoFollowing {
 
   private val REAL_USER_ID_BOUND = 1075
-  private var USER_NUMBER_UP_BOUND = 0
+  private var USER_NUMBER_UP_BOUND = 4000
   private val USER_NUMBER_BOTTOM_BOUND = 2
   private val CANDIDATES_SIZE = 100
   private val RDD_PARTITION_SIZE = 100
-  private val COMMON_FOLLOWER_NUMBER = 5
+  private var COMMON_FOLLOWER_NUMBER = 10
 
   def main(args: Array[String]) {
     val conf = new SparkConf()
@@ -30,6 +30,8 @@ object recommendUserBasedOnAlsoFollowing {
       .map(_.split("\t"))
       .filter(_.length == 3)
       .filter(x => x(0).toInt >= REAL_USER_ID_BOUND && x(1).toInt >= REAL_USER_ID_BOUND)
+
+    COMMON_FOLLOWER_NUMBER = args(4).toInt
 
     val commonFollower = followList
       .map(x => (x(1), x(0)))
@@ -57,7 +59,7 @@ object recommendUserBasedOnAlsoFollowing {
     }) // A, number, B
       .groupByKey()
       .map(x => {
-      val recommend = x._2.toSeq.sortWith(_._1 > _._1).take(10 * CANDIDATES_SIZE)
+      val recommend = x._2.toSeq.sortWith(_._1 > _._1)
       (x._1, recommend)
     })
 
@@ -83,7 +85,7 @@ object recommendUserBasedOnAlsoFollowing {
       (user, candidates)
     })
     result
-      .map(x => userRecommend(x._1, x._2))
+      .map(x => alsoFlowingUserRecommend(x._1, x._2))
       .saveToEs("recommendation/alsoFollowing")
     result
       .map(x => (x._1, x._2))

@@ -5,7 +5,7 @@ import org.elasticsearch.spark._
 
 /**
  * Created by canoe on 6/27/15.
- * not using 
+ * not using
  */
 
 case class contextRecommend(user: String, contextCandidates: Seq[String])

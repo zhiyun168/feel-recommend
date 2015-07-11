@@ -8,12 +8,12 @@ import scala.util.Random.nextInt
  * Created by canoe on 6/27/15.
  */
 
-case class goalRecommend(user: String, goalCandidates: Seq[String])
+case class genderGoalRecommend(user: String, candidates: Seq[String])
 
 object recommendGoalBasedOnGender {
 
   private val REAL_USER_ID_BOUND = 1075
-  private val GOAL_THRESHOLD = 10
+  private var GOAL_THRESHOLD = 30
   private val RDD_PARTITION_SIZE = 10
 
   def main(args: Array[String]) = {
@@ -27,6 +27,8 @@ object recommendGoalBasedOnGender {
       .filter(_.length == 2) //user, gender
       .filter(_(0).toLong >= REAL_USER_ID_BOUND)
       .map(x => (x(0), x(1)))
+
+    GOAL_THRESHOLD = args(4).toInt
 
     val genderGoal = sc.textFile(args(2))
       .map(_.split("\t"))
@@ -57,7 +59,7 @@ object recommendGoalBasedOnGender {
       .map(x => {
       val user = x._2._1
       val goalCandidates = x._2._2.map(y => (y, nextInt())).sortWith(_._2 > _._2).map(_._1)
-      goalRecommend(user, goalCandidates)
+      genderGoalRecommend(user, goalCandidates)
     })
 
     result.saveToEs("recommendation/genderGoal")
