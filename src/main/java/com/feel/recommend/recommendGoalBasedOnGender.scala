@@ -30,11 +30,15 @@ object recommendGoalBasedOnGender {
 
     GOAL_THRESHOLD = args(4).toInt
 
-    val genderGoal = sc.textFile(args(2))
+    val userGoal = sc.textFile(args(2))
       .map(_.split("\t"))
       .filter(_.length == 2)
       .filter(_(0).toLong >= REAL_USER_ID_BOUND)
       .map(x => (x(0), x(1))) // user, goal
+
+    val userGoalList = userGoal.reduceByKey((a, b) => a + "\t" + b)
+
+    val genderGoal = userGoal
       .join(userGender) //user, goal, gender
       .map(x => (x._2._1 + "\t" + x._2._2, 1))
       .reduceByKey((a, b) => a + b)
@@ -59,9 +63,22 @@ object recommendGoalBasedOnGender {
       .map(x => {
       val user = x._2._1
       val goalCandidates = x._2._2.map(y => (y, nextInt())).sortWith(_._2 > _._2).map(_._1)
-      genderGoalRecommend(user, goalCandidates)
+      (user, goalCandidates)
     })
-
+      .leftOuterJoin(userGoalList)
+    .map(x => {
+      val user = x._1
+      x._2._2 match {
+        case Some(joinedGoalList) => {
+          val joinedGoalSet = joinedGoalList.split("\t").toSet
+          val goalCandidates = x._2._1.filter(!joinedGoalSet(_))
+          genderGoalRecommend(user, goalCandidates)
+        }
+        case None => {
+          genderGoalRecommend(user, x._2._1)
+        }
+      }
+    })
     result.saveToEs("recommendation/genderGoal")
     result.saveAsTextFile(args(3))
   }
