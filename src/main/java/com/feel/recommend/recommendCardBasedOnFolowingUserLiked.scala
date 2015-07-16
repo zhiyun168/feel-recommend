@@ -1,5 +1,6 @@
 package com.feel.recommend
 
+
 import org.apache.spark.{SparkContext, SparkConf}
 import scala.collection.mutable.HashMap
 import org.elasticsearch.spark._
@@ -37,7 +38,7 @@ object recommendCardBasedOnFollowingUserLiked {
       .map(x => (x(0), 1))
       .reduceByKey((a, b) => a + b)
 
-    val userCard = sc.textFile(args(2))
+    val card = sc.textFile(args(2))
       .map(_.split("\t"))
       .filter(_.length == 2)
       .filter(_(0).toInt >= REAL_USER_ID_BOUND) //user, card
@@ -52,7 +53,7 @@ object recommendCardBasedOnFollowingUserLiked {
       .filter(_.length == 2)
       .filter(_(0).toInt >= REAL_USER_ID_BOUND)
       .map(x => (x(1), x(0))) //likedCard, user
-      .join(userCard)
+      .join(card) //likedCard, user, "_"
       .map(x => (x._2._1, x._1)) //user, likedCard
       .groupByKey()
 
@@ -61,26 +62,34 @@ object recommendCardBasedOnFollowingUserLiked {
       .filter(_.length == 2)
       .filter(x => x(0).toInt >= REAL_USER_ID_BOUND && x(1).toInt >= REAL_USER_ID_BOUND)
       .map(x => (x(0), x(1))) // following, user
-      .join(userLikedCard)
-      .map(x => (x._2._1, x._2._2))
+      .join(userLikedCard) // following, user, liked card
+      .map(x => (x._2._1, x._2._2)) // user, recommended card
       .groupByKey()
-      .join(userLikedCard)
+      .leftOuterJoin(userLikedCard) // user, recommended cardList, userLikedCard
       .flatMap(x => {
       val user = x._1
+      val cardLikedCount = new HashMap[String, Int]
       val followingLikedCard = x._2._1.flatten
-      val userLikedCardSet = x._2._2.toSet
-      val hashMap = new HashMap[String, Int]
       followingLikedCard.foreach(card => {
-        if (hashMap.get(card).isEmpty) {
-         hashMap(card) = 1
+        if (cardLikedCount.get(card).isEmpty) {
+          cardLikedCount(card) = 1
         } else {
-          hashMap(card) += 1
+          cardLikedCount(card) += 1
         }
       })
-      hashMap.toSeq.filter(_._2 <= FOLLOWING_LIKED_UPPER_BOUND)
-        .filter(x => !userLikedCardSet(x._1))
-        .sortWith(_._2 > _._2)
-        .map(x => (x._1, user)) //recommendCard, User
+      val candidateList = x._2._2 match {
+        case Some(userLikedCardList) => {
+          val userLikedCardSet = userLikedCardList.toSet
+          cardLikedCount.filter(_._2 <= FOLLOWING_LIKED_UPPER_BOUND)
+            .filter(x => !userLikedCardSet(x._1))
+            .map(x => (x._1, user)) //recommendCard, User
+        }
+        case None => {
+          cardLikedCount.filter(_._2 <= FOLLOWING_LIKED_UPPER_BOUND)
+            .map(x => (x._1, user)) //recommendCard, User
+        }
+      }
+      candidateList
     })
 
     val cardLikedNumber = sc.textFile(args(3))
@@ -92,15 +101,15 @@ object recommendCardBasedOnFollowingUserLiked {
       .reduceByKey((a, b) => a + b)
 
     val result = followingLikedCard
-      .join(cardLikedNumber)
-      .map(x => (x._2._1, (x._1, x._2._2))) //user, card, number
+      .join(cardLikedNumber)// recommended card, user, cardLikedNumber
+      .map(x => (x._2._1, (x._1, x._2._2))) //user, recommended card, cardLikedNumber
       .groupByKey()
       .map(x => {
       val user = x._1
       val candidates = x._2.toSeq.sortWith(_._2 > _._2).map(_._1).take(CANDIDATE_SIZE)
       cardRecommend(user, candidates)
     })
-    result.saveToEs("recommendation/followingUserLikedCard")
+    //result.saveToEs("recommendation/followingUserLikedCard")
     result.saveAsTextFile(args(4))
   }
 }
