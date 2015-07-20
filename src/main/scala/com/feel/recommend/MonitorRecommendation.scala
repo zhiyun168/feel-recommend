@@ -17,7 +17,7 @@ object MonitorRecommendation {
        sc.textFile(arg)
          .map(_.split("\t"))
          .filter(_.length == 2)
-         .filter(_(0).toInt <= REAL_USER_ID_BOUND)
+         .filter(_(0).toInt >= REAL_USER_ID_BOUND)
          .map(x => (x(0), x(1))) // user, attribute
          .reduceByKey((a, b) => a + "\t" + b)
          .map(x => {
@@ -32,14 +32,14 @@ object MonitorRecommendation {
     val recommendation = sc.textFile(args(1))
       .map(_.replaceAll("[()a-zA-Z \\t]", "").split(","))
       .filter(_.length >= 2)
-      .filter(_(0).toInt <= REAL_USER_ID_BOUND)
+      .filter(_(0).toInt >= REAL_USER_ID_BOUND)
       .map(x => {
       val user = x.head
       val attribution = x.tail.toSet
       (user, attribution)
     })
 
-    val recommendationLikedRatio = recommendation.join(likedAttributionRDD)
+    val recommendationLikedStatics = recommendation.join(likedAttributionRDD)
     .map(x => {
       val user = x._1
       val allRecommendationNumber = x._2._1.size + 0.0
@@ -47,6 +47,9 @@ object MonitorRecommendation {
       (user, likedNumber + "\t" + allRecommendationNumber + "\t" + likedNumber / allRecommendationNumber)
     })
 
-    recommendationLikedRatio.saveAsTextFile(args(2))
+    recommendationLikedStatics.saveAsTextFile(args(2))
+    recommendationLikedStatics.map(x => (x._2.split("\t").head, 1))
+    .reduceByKey((a, b) => a + b)
+    .saveAsTextFile(args(3))
   }
 }
