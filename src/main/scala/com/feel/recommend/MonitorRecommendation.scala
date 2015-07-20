@@ -50,6 +50,8 @@ object MonitorRecommendation {
     recommendationLikedStatics.saveAsTextFile(args(2))
     recommendationLikedStatics.map(x => (x._2.split("\t").head, 1))
     .reduceByKey((a, b) => a + b)
-    .saveAsTextFile(args(3))
+    .saveAsTextFile(args(3)) // recommendationLikedStatics
+
+    likedAttributionRDD.map(x => (x._2.size, 1)).reduceByKey((a, b) => a + b).saveAsTextFile(args(4))
   }
 }
