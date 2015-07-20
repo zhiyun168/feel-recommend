@@ -8,7 +8,7 @@ import org.apache.spark.mllib.recommendation.Rating
 /**
  * Created by canoe on 7/14/15.
  */
-object recommendCardBasedOnALS {
+object RecommendCardBasedOnALS {
 
   private val REAL_USER_ID_BOUND = 1075
   private var RANK = 0

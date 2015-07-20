@@ -7,9 +7,9 @@ package com.feel.recommend
 import org.apache.spark.{SparkConf, SparkContext}
 import org.elasticsearch.spark._
 
-case class alsoFlowingUserRecommend(user: String, candidates: Seq[String])
+case class AlsoFlowingUserRecommend(user: String, candidates: Seq[String])
 
-object recommendUserBasedOnAlsoFollowing {
+object RecommendUserBasedOnAlsoFollowing {
 
   private val REAL_USER_ID_BOUND = 1075
   private var USER_NUMBER_UP_BOUND = 4000
@@ -78,6 +78,7 @@ object recommendUserBasedOnAlsoFollowing {
       val value = x._2.toSeq
       val followSet = value.map(_._1).toSet
       val candidates = value.map(_._2).flatten.filter(x => !followSet(x._2) && x._2 != user)
+
         .sortWith(_._1 > _._1)//todo recount when memory get bigger
         .map(_._2)
         .distinct
@@ -85,7 +86,7 @@ object recommendUserBasedOnAlsoFollowing {
       (user, candidates)
     })
     result
-      .map(x => alsoFlowingUserRecommend(x._1, x._2))
+      .map(x => AlsoFlowingUserRecommend(x._1, x._2))
       .saveToEs("recommendation/alsoFollowing")
     result
       .map(x => (x._1, x._2))

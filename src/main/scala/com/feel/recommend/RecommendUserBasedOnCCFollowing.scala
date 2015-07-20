@@ -7,9 +7,9 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.graphx.{Edge, Graph}
 import org.elasticsearch.spark._
 
-case class ccUserRecommend(user: String, candidates: Seq[String])
+case class CCUserRecommend(user: String, candidates: Seq[String])
 
-object recommendUserBasedOnCCFollowing {
+object RecommendUserBasedOnCCFollowing {
 
 
   private val REAL_USER_ID_BOUND = 1075
@@ -122,7 +122,7 @@ object recommendUserBasedOnCCFollowing {
       .map(x => {
       val user = x._1
       val candidates = x._2.split("\t").map(_.split(",")).sortWith(_(1).toInt > _(1).toInt).map(_(0)).take(CANDIDATES_SIZE).toSeq
-      ccUserRecommend(user, candidates)
+      CCUserRecommend(user, candidates)
     })
       result.saveToEs("recommendation/CCFollowing")
       result.saveAsTextFile(args(3))

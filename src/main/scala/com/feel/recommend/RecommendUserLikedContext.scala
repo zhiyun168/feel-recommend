@@ -8,9 +8,9 @@ import org.elasticsearch.spark._
  * not using
  */
 
-case class contextRecommend(user: String, contextCandidates: Seq[String])
+case class ContextRecommend(user: String, contextCandidates: Seq[String])
 
-object recommendUserLikedContext {
+object RecommendUserLikedContext {
 
   private val REAL_USER_ID_BOUND = 1075
 
@@ -39,8 +39,9 @@ object recommendUserLikedContext {
       .map(x => {
       val user = x._1
       val userContextSet = x._2._2.split("\t").toSet
-      val contextCandidates = x._2._1.map(_._2.split("\t")).flatten.filter(x => !userContextSet(x)).toSet.take(100).toSeq
-      (user, contextCandidates)
+      val ContextCandidates = x._2._1.map(_._2.split("\t")).flatten.filter(x => !userContextSet(x)).toSet.take(100)
+        .toSeq
+      (user, ContextCandidates)
     })
     recommendedContext.saveToEs("recommendation/alsoFollowingJoinedTask")
     recommendedContext.saveAsTextFile(args(3))

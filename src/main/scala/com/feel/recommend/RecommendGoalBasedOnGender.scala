@@ -8,9 +8,9 @@ import scala.util.Random.nextInt
  * Created by canoe on 6/27/15.
  */
 
-case class genderGoalRecommend(user: String, candidates: Seq[String])
+case class GenderGoalRecommend(user: String, candidates: Seq[String])
 
-object recommendGoalBasedOnGender {
+object RecommendGoalBasedOnGender {
 
   private val REAL_USER_ID_BOUND = 1075
   private var GOAL_THRESHOLD = 30
@@ -72,10 +72,10 @@ object recommendGoalBasedOnGender {
         case Some(joinedGoalList) => {
           val joinedGoalSet = joinedGoalList.split("\t").toSet
           val goalCandidates = x._2._1.filter(!joinedGoalSet(_))
-          genderGoalRecommend(user, goalCandidates)
+          GenderGoalRecommend(user, goalCandidates)
         }
         case None => {
-          genderGoalRecommend(user, x._2._1)
+          GenderGoalRecommend(user, x._2._1)
         }
       }
     })

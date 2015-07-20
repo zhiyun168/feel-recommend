@@ -9,9 +9,9 @@ import org.elasticsearch.spark._
  * Created by canoe on 7/15/15.
  */
 
-case class cardRecommend(user: String, candidates: Seq[String])
+case class CardRecommend(user: String, candidates: Seq[String])
 
-object recommendCardBasedOnFollowingUserLiked {
+object RecommendCardBasedOnFollowingUserLiked {
 
 
   private val REAL_USER_ID_BOUND = 1075
@@ -107,7 +107,7 @@ object recommendCardBasedOnFollowingUserLiked {
       .map(x => {
       val user = x._1
       val candidates = x._2.toSeq.sortWith(_._2 > _._2).map(_._1).take(CANDIDATE_SIZE)
-      cardRecommend(user, candidates)
+      CardRecommend(user, candidates)
     })
     result.saveToEs("recommendation/followingUserLikedCard")
     result.saveAsTextFile(args(4))
