@@ -53,5 +53,21 @@ object MonitorRecommendation {
     .saveAsTextFile(args(3)) // recommendationLikedStatics
 
     likedAttributionRDD.map(x => (x._2.size, 1)).reduceByKey((a, b) => a + b).saveAsTextFile(args(4))
+
+    val userGender = sc.textFile(args(5))
+    .map(_.split("\t"))
+    .filter(_.length == 2)
+    .filter(_(0).toInt >= REAL_USER_ID_BOUND)
+    .map(x => (x(0), x(1)))
+
+    val genderRecommendationLikedStatics = userGender.join(recommendationLikedStatics)
+    .map(x => {
+      val gender = x._2._1
+      val number = x._2._2.split("\t").head
+      (gender + "," + number, 1)
+    })
+    .reduceByKey((a, b) => a + b)
+
+    genderRecommendationLikedStatics.saveAsTextFile(args(6))
   }
 }
