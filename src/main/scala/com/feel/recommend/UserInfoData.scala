@@ -83,7 +83,7 @@ object UserInfoData {
         else
           tagCount(tag) += 1
       })
-      val mostTag = tagCount.toArray.sortWith(_._2 > _._2).take(3).map(_._1).sortWith(_ < _).mkString(",")
+      val mostTag = tagCount.toArray.sortWith(_._2 > _._2).take(3).map(_._1).sortWith(_ < _).mkString("|")
       (user, "mostTag:" + mostTag)
     }).saveAsTextFile(PREFIX + "user_attribution_most_tag")
   }
