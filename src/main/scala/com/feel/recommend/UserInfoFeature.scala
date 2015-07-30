@@ -51,18 +51,21 @@ object UserInfoFeature {
       val user = x._1._1 + "\t" + x._1._2
       val featureMapList = x._2.map(_._2)
 
-      def featureAverage(feature: String, featureMapList: Iterable[HashMap[String, String]]) = {
-        if (featureMapList.size != 0)
-          featureMapList.foldLeft(0D)((acc, hash) => acc + hash(feature).toDouble) / featureMapList.size
-        else
-          0D
+      def mean(values: Iterable[Double]) = {
+        val (sum, size) = values.foldLeft((0D, 0L))((acc, value) => (acc._1 + value, acc._2 + 1))
+        if (size == 0) 0D else sum / size
       }
 
-      val ageAverage = featureAverage("age", featureMapList)
-      val followingRatioAverage = featureAverage("followingRatio", featureMapList)
+      val ageAverage = mean(featureMapList.map(x => x.getOrElse("age", "")).filter(_ != "").map(_.toDouble))
+      val followingRatioAverage = mean(featureMapList.map(x => x.getOrElse("followingRatio", ""))
+        .filter(_ != "")
+        .map(_.toDouble))
 
-      val mostTag = featureMapList.foldLeft(new HashMap[String, Int]())((count, hash) => {
-        hash.get("mostTag").toString.split("|").foreach(tag => {
+      val mostTag = featureMapList.map(x => x.getOrElse("mostTag", ""))
+        .filter(_ != "")
+        .map(_.split("|"))
+        .foldLeft(new HashMap[String, Int])((count, value) => {
+        value.foreach(tag => {
           if (count.get(tag).isEmpty) {
             count(tag) = 1
           } else {
@@ -70,7 +73,7 @@ object UserInfoFeature {
           }
         })
         count
-      }).toArray.sortWith(_._2 > _._2).map(_._1).take(3)
+      })
       (user, (ageAverage, followingRatioAverage, mostTag))
     })
 
