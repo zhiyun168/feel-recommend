@@ -10,6 +10,7 @@ import scala.collection.mutable.HashMap
 object UserInfoFeature {
 
   private val REAL_USER_ID_BOUND = 1075
+  private val TAG_SIZE = 5
 
   def main(args: Array[String]) = {
 
@@ -63,9 +64,8 @@ object UserInfoFeature {
 
       val mostTag = featureMapList.map(x => x.getOrElse("mostTag", ""))
         .filter(_ != "")
-        .map(_.split("|"))
         .foldLeft(new HashMap[String, Int])((count, value) => {
-        value.foreach(tag => {
+        value.split("\\|").foreach(tag => {
           if (count.get(tag).isEmpty) {
             count(tag) = 1
           } else {
@@ -73,7 +73,7 @@ object UserInfoFeature {
           }
         })
         count
-      })
+      }).toArray.sortWith(_._2 > _._2).take(TAG_SIZE).map(_._1).sortWith(_ < _).mkString("|")
       (user, (ageAverage, followingRatioAverage, mostTag))
     })
 
