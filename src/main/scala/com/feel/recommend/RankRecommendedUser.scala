@@ -81,8 +81,8 @@ object RankRecommendedUser {
 
       val distance = abs(userAverageFeature(0).toDouble - candidateFeature(0).toDouble) * 2D +
         abs(userAverageFeature(1).toDouble - candidateFeature(1).toDouble) * 3D +
-        (userAverageFeature(2).split("\\t").toSet & candidateFeature(2).split("\\t").toSet).size +
-        { if(userGender == candidateGender) 0D else 3D }
+        (userAverageFeature(2).split("\\|").toSet & candidateFeature(2).split("\\|").toSet).size +
+        { if (userGender == candidateGender) 3D else 0D }
 
       val user = userTmp(0)
       val candidate = candidateTmp(0)
