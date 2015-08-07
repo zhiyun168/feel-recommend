@@ -13,6 +13,7 @@ object RankRecommendedUser {
 
   private val REAL_ID_BOUND = 1075
   private val CANDIDATE_SIZE = 100
+  private val TAG_SIZE = 5
 
   def main(args: Array[String]) = {
     val conf = new SparkConf()
@@ -40,9 +41,9 @@ object RankRecommendedUser {
         featureHash
       })
       val featureArray = new ArrayBuffer[String]
-      featureArray.append(featureHash("age"))
-      featureArray.append(featureHash("followingRatio"))
-      featureArray.append(featureHash("mostTag"))
+      featureArray.append(featureHash.getOrElse("age", "22"))
+      featureArray.append(featureHash.getOrElse("followingRatio", "0"))
+      featureArray.append(featureHash.getOrElse("mostTag", ""))
       (user, featureArray)
     }).join(userGender)
     .map(x => {
@@ -51,15 +52,16 @@ object RankRecommendedUser {
 
     val userFollowingAverageFeature = sc.textFile(args(2))
       .map(_.replaceAll("[()]", "").split(","))
+      .filter(_.length == 4)
       .map(x => (x.head, x.tail))
 
 
     val rankedRecommendedUserRDD = sc.textFile(args(3))
-      .map(_.replaceAll("[a-zA-z()]", "").split(","))
+      .map(_.replaceAll("[a-zA-z() ]", "").split(","))
       .flatMap(x => {
       val user = x.head
-      val candidate = x.tail
-      candidate.map(c => (c, user)) // candidate, user
+      val candidates = x.tail
+      candidates.map(c => (c, user)) // candidate, user
     })
       .join(userGender) // candidate, (user, candidateGender)
       .map(x => {
@@ -79,10 +81,10 @@ object RankRecommendedUser {
       val userGender = userTmp(1)
       val candidateGender = candidateTmp(1)
 
-      val distance = abs(userAverageFeature(0).toDouble - candidateFeature(0).toDouble) * 2D +
-        abs(userAverageFeature(1).toDouble - candidateFeature(1).toDouble) * 3D +
-        (userAverageFeature(2).split("\\|").toSet & candidateFeature(2).split("\\|").toSet).size +
-        { if (userGender == candidateGender) 3D else 0D }
+      val distance = abs(userAverageFeature(0).toDouble - candidateFeature(0).toDouble) * 0.1D +
+        abs(userAverageFeature(1).toDouble - candidateFeature(1).toDouble) * 0.5D +
+        TAG_SIZE - (userAverageFeature(2).split("\\|").toSet & candidateFeature(2).split("\\|").toSet).size +
+        { if (userGender == candidateGender) 10D else 0D }
 
       val user = userTmp(0)
       val candidate = candidateTmp(0)
@@ -91,7 +93,7 @@ object RankRecommendedUser {
     .groupByKey()
     .map(x => {
       val user = x._1
-      val candidates = x._2.toArray.sortWith(_._2 < _._2).map(_._1).take(CANDIDATE_SIZE)
+      val candidates = x._2.toArray.sortWith(_._2 < _._2).map(_._1).take(CANDIDATE_SIZE).mkString(",")
       (user, candidates)
     })
     rankedRecommendedUserRDD.saveAsTextFile(args(4))
