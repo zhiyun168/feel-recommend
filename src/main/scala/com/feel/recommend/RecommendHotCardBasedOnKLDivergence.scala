@@ -1,9 +1,8 @@
 package com.feel.recommend
 
-import breeze.linalg.max
 import org.apache.spark.{SparkContext, SparkConf}
 import scala.collection.mutable
-import scala.math.log
+import scala.math.{log, max}
 
 /**
  * Created by canoe on 8/7/15.
@@ -16,10 +15,13 @@ object RecommendHotCardBasedOnKLDivergence {
     p.foldLeft(0D)((acc, value) => (acc + value._1 / log(value._1 / value._2)))
   }
 
-  def getFanScore(str: String) : ((String, String, String), Int) = {
-    //(("user", "card", "F"), 1) // (("user", "card", "N") , 2)
+  def parseHistoryHotScore(str: String) : ((String, String), Int) = {
+    //(("user", "F"), 1) // (("user", "N") , 2)
     val features = str.replaceAll("[() ]", "").split(",")
-    ((features(0), features(1), features(2)), features(3).toInt)
+    features.length match {
+      case 3 => ((features(0), features(1)), features(3).toInt)
+      case _ => null
+    }
   }
 
   def main(args: Array[String]) = {
@@ -27,17 +29,26 @@ object RecommendHotCardBasedOnKLDivergence {
     val conf = new SparkConf()
     val sc = new SparkContext(conf)
 
-    val userHistoryMaxValueRDD = sc.textFile(args(0)) //(user, (max, ts), (max, ts))
-      .map(getFanScore(_))
+    val userHistoryMaxValueRDD = sc.textFile(args(0)) //((user, F / N), count)
+      .map(parseHistoryHotScore(_))
+      .filter(_ != null)
 
-    val likedRDD = sc.textFile(args(1)) // last two hour data
+    val cardOwner = sc.textFile(args(1))
       .map(_.split("\t"))
-      .filter(_.length == 3)
-      .filter(x => x(0).toInt >= REAL_USER_ID_BOUND && x(1).toInt >= REAL_USER_ID_BOUND) // owner, cUser, card
-      .map(x => (x(0), (x(1), x(2))))
+      .filter(_.length == 2)
+      .filter(x => x(0).toInt >= REAL_USER_ID_BOUND)
+      .map(x => (x(1), x(0))) // card, owner
+
+    val likedRDD = sc.textFile(args(2)) // last two hour data
+      .map(_.split("\t"))
+      .filter(_.length == 2)
+      .filter(x => x(1).toInt >= REAL_USER_ID_BOUND)
+      .map(x => (x(0), x(1))) //card, cUser
+      .join(cardOwner) // card, (cUser, owner)
+      .map(x => (x._2._2, (x._1, x._2._1)))
       .groupByKey()
 
-    val followerRDD = sc.textFile(args(2))
+    val followerRDD = sc.textFile(args(3))
       .map(_.split("\t"))
       .filter(_.length == 2)
       .filter(x => x(0).toInt >= REAL_USER_ID_BOUND && x(1).toInt >= REAL_USER_ID_BOUND) // user, follower
@@ -46,7 +57,7 @@ object RecommendHotCardBasedOnKLDivergence {
       .map(x => (x._1, x._2.toSet))
 
     val valueRDD = followerRDD
-      .join(likedRDD) // user, (followerList, (cUser, card))
+      .join(likedRDD) // user, (followerList, Iterable(cUser, card))
       .flatMap(x => {
       val hashCount = new mutable.HashMap[(String, String, String), Int]()
       val followerSet = x._2._1.toSet
@@ -58,30 +69,43 @@ object RecommendHotCardBasedOnKLDivergence {
           else
             hashCount(key) += 1
         } else {
-          val key = (x._1, y._1, "N")
+          val key = (x._1, y._2, "N")
           if (hashCount.get(key).isEmpty)
             hashCount(key) = 1
           else
             hashCount(key) += 1
         }
       })
-      hashCount.toList
-    }).join(userHistoryMaxValueRDD)
+      hashCount.toList.map(userLikeCardInfo =>
+        ((userLikeCardInfo._1._1, userLikeCardInfo._1._3), (userLikeCardInfo._1._2, userLikeCardInfo._2)))
+    }).leftOuterJoin(userHistoryMaxValueRDD) // ((user, F / N), ((card, count), historyCount))
 
     val userCardHotScore = valueRDD
-      .map(x => ((x._1._1, x._1._2), (x._2._1 + 1D , x._2._2 + 1D)))
-      .groupByKey()
+      .map(x => {
+      x._2._2 match {
+        case Some(historyCount) =>
+          (x._1._1 + "\t" + x._2._1._1, (x._2._1._2 + 1D, historyCount + 1D))
+        case None =>
+          (x._1._1 + "\t" + x._2._1._1, (x._2._1._2 + 1D, 1D))
+      }
+    }).groupByKey() // ((user, card), scoreTuple)
       .map(x => {
       val cardInfo = x._1
       val score = KLDivergence(x._2)
       (cardInfo, score)
     })
-    userCardHotScore.saveAsTextFile(args(3))
+    userCardHotScore.saveAsTextFile(args(4))
 
     val userHistoryUpdatedMaxValueRDD = valueRDD.
-      map(x => (x._1, max(x._2._1, x._2._2)))
+      map(x =>
+      x._2._2 match {
+        case Some(historyCount) =>
+          (x._1, max(x._2._1._2, historyCount))
+        case None =>
+          (x._1, max(x._2._1._2, 1))
+      })
 
-    userHistoryMaxValueRDD.saveAsTextFile(args(4))
+    userHistoryUpdatedMaxValueRDD.saveAsTextFile(args(5))
 
   }
 }
