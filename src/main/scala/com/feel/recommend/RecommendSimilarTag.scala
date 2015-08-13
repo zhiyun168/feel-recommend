@@ -1,8 +1,9 @@
 package com.feel.recommend
 
-import breeze.linalg.min
+import breeze.linalg.{max, min}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkContext, SparkConf}
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -11,8 +12,9 @@ import scala.collection.mutable.ArrayBuffer
 object RecommendSimilarTag {
 
   private val TAG_USED_NUMBER_FILTER = 100
-  private val CON_EXIST_TAG = 10
+  private val CON_EXIST_TAG = 20
   private val INF = (1 << 30)
+  private val TAG_FILTER = 20
 
   def jaccardSimilarity(A: String, B: String) = {
     val aSet = A.toSet
@@ -20,7 +22,7 @@ object RecommendSimilarTag {
     ((aSet & bSet).size + 0D) / ((aSet | bSet).size + 0D)
   }
 
-  def editDistance(A: String, B: String) = {
+  def editSimilarity(A: String, B: String) = {
     val dp = Array.ofDim[Int](A.length + 1, B.length + 1)
     for (i <- 0 to A.length) {
       for (j <- 0 to B.length) {
@@ -43,7 +45,7 @@ object RecommendSimilarTag {
         }
       }
     }
-    dp(A.length)(B.length)
+    1 - dp(A.length)(B.length).toDouble / max(A.length, B.length)
   }
 
   def main(args: Array[String]) = {
@@ -54,6 +56,7 @@ object RecommendSimilarTag {
     val tagInfoRDD = sc.textFile(args(0))
       .map(_.split("\t"))
       .filter(_.length == 3)
+      .map(x => x.map(_.replaceAll("[ \t]", "").toLowerCase()))
 
     val coExitTagRDD = tagInfoRDD.map(x => (x(0), (x(1), x(2)))) //card, bid, bname
       .groupByKey()
@@ -73,7 +76,9 @@ object RecommendSimilarTag {
       .map(x => {
       val tag = x._1
       val sortedCoExitTag = x._2.toSeq.sortWith(_._2 > _._2).take(CON_EXIST_TAG)
-      (tag, sortedCoExitTag)
+      val sum = sortedCoExitTag.foldLeft(0D)((acc, value) => acc + value._2)
+
+      (tag, sortedCoExitTag.map(x => (x._1, x._2 / sum)))
     })
     coExitTagRDD.saveAsTextFile(args(1))
 
@@ -87,14 +92,34 @@ object RecommendSimilarTag {
       data.map(x => (x._1, (x._2, f(x._1._2, x._2._2))))
         .groupByKey()
         .map(x => {
-        (x._1, x._2.toSeq.sortWith(_._2 < _._2).mkString("\\|"))
+        (x._1, x._2.toSeq.sortWith(_._2 > _._2).take(TAG_FILTER))
       })
     }
 
     val topTagCartesianRDD = topTagRDD.cartesian(topTagRDD)
       .filter(x => x._1 != x._2)
 
-    topTagSimilarity(topTagCartesianRDD, editDistance).saveAsTextFile(args(2))
-    topTagSimilarity(topTagCartesianRDD, jaccardSimilarity).saveAsTextFile(args(3))
+    val topTagEditSimilarityRDD = topTagSimilarity(topTagCartesianRDD, editSimilarity)
+      topTagEditSimilarityRDD.saveAsTextFile(args(2))
+    val topTagJaccardSimilarityRDD = topTagSimilarity(topTagCartesianRDD, jaccardSimilarity)
+      topTagJaccardSimilarityRDD.saveAsTextFile(args(3))
+
+    val result = coExitTagRDD.cogroup(topTagEditSimilarityRDD, topTagJaccardSimilarityRDD)
+    .map(x => {
+      val key = x._1
+      val value = (x._2._1 ++ x._2._2 ++ x._2._3).toSeq.flatten
+      .foldLeft(new mutable.HashMap[(String, String), (Double, Double)]())((hashAverage, tuple) => {
+        if (hashAverage.get(tuple._1).isEmpty)
+          hashAverage(tuple._1) = (tuple._2, 1D)
+        else {
+          val preValue = hashAverage(tuple._1)
+          hashAverage(tuple._1) = (preValue._1 + tuple._2, preValue._2 + 1D)
+        }
+        hashAverage
+      }).toArray.map(x => (x._1, x._2._1 / x._2._2)).sortWith(_._2 > _._2).mkString("|")
+      (key, value)
+    })
+
+    result.saveAsTextFile(args(4))
   }
 }
