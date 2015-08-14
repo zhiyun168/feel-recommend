@@ -12,6 +12,7 @@ object RecommendHotCardBasedOnKLDivergence {
   private val REAL_USER_ID_BOUND = 1075
   private var HOT_SCORE_THRESHOLD = 200D
   private val RDD_PARTITION_NUMBER = 100
+  private val CANDAIDTE_SIZE = 100
 
   def KLDivergence(p: Iterable[(Double, Double)]) = {
     p.foldLeft(0D)((acc, value) => (acc + value._1 * log(value._1 / value._2)))
@@ -35,7 +36,7 @@ object RecommendHotCardBasedOnKLDivergence {
       .map(parseHistoryHotScore(_))
       .filter(_ != null)
 
-    val cardOwner = sc.textFile(args(1))
+    val cardOwner = sc.textFile(args(1)) // 12 hour data
       .map(_.split("\t"))
       .filter(_.length == 3)
       .filter(x => x(0).toInt >= REAL_USER_ID_BOUND && x(2) == "card")
@@ -97,10 +98,39 @@ object RecommendHotCardBasedOnKLDivergence {
       (cardInfo, score)
     })
 
-    HOT_SCORE_THRESHOLD = args(6).toDouble
-    userCardHotScore.filter(_._2 > HOT_SCORE_THRESHOLD)
-      .sortBy(x => x._2, true, RDD_PARTITION_NUMBER)
-      .saveAsTextFile (args(4))
+    val cardSonTag = sc.textFile(args(4)) // 12 hour data
+      .map(_.split("\t"))
+      .filter(_.length == 2)
+      .map(x => (x(1), x(0))) // sonTag, card
+
+    val cardParentTag = sc.textFile(args(5)) //
+      .map(_.split("\t"))
+      .filter(_.length == 2)
+      .map(x => (x(1), x(0))) // sonTag, parentTag
+      .join(cardSonTag)
+      .map(x => {
+      (x._2._2, (x._2._1, x._1)) // card, (parentTag, sonTag)  - tag
+    })
+
+    HOT_SCORE_THRESHOLD = args(8).toDouble
+    userCardHotScore
+      .map(x => {
+      val tmp = x._1.split("\t")
+      (tmp(1), (tmp(0), x._2)) // card, (user, score)
+    })
+      .join(cardParentTag) // card, ((user, score), tag)
+      .map(x => {
+        val key = x._2._2._1 // parentTag
+        val value = ((x._2._1._1, x._2._1._2, x._2._2._2), x._1) // ((user, score, sonTag), card)
+      (key, value)
+    })
+      .groupByKey()
+      .map(x => {
+      val key = x._1
+      val value = x._2.toSeq.sortWith(_._1._2 > _._1._2).distinct.take(CANDAIDTE_SIZE).mkString("|")
+      key + "|" + value
+    })
+      .saveAsTextFile (args(6))
 
     val userHistoryUpdatedMaxValueRDD = valueRDD.
       map(x =>
@@ -117,7 +147,7 @@ object RecommendHotCardBasedOnKLDivergence {
       (key, value)
     })
 
-    userHistoryUpdatedMaxValueRDD.saveAsTextFile(args(5))
+    userHistoryUpdatedMaxValueRDD.saveAsTextFile(args(7))
 
   }
 }
