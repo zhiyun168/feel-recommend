@@ -13,6 +13,7 @@ object RecommendUserBasedOnAlsoFollowing {
 
   private val REAL_USER_ID_BOUND = 1075
   private var USER_NUMBER_UP_BOUND = 4000
+  private val USER_NUMBER_UP_BOUND_FOR_COMMON = 1000
   private val USER_NUMBER_BOTTOM_BOUND = 2
   private val CANDIDATES_SIZE = 100
   private val RDD_PARTITION_SIZE = 100
@@ -37,7 +38,7 @@ object RecommendUserBasedOnAlsoFollowing {
       .map(x => (x(1), x(0)))
       .reduceByKey((a , b) => a + "\t" + b) //action
       .map(x => x._2.split("\t"))
-      .filter(x => (x.length >= USER_NUMBER_BOTTOM_BOUND && x.length <= USER_NUMBER_UP_BOUND))
+      .filter(x => (x.length >= USER_NUMBER_BOTTOM_BOUND && x.length <= USER_NUMBER_UP_BOUND_FOR_COMMON))
       .flatMap(x => {
       val result = new Array[String](x.size * x.size)
       //case that user follows to many users and only one user just does not give a shot
@@ -85,9 +86,9 @@ object RecommendUserBasedOnAlsoFollowing {
         .take(CANDIDATES_SIZE)
       (user, candidates)
     })
-    result
+    /*result
       .map(x => AlsoFlowingUserRecommend(x._1, x._2))
-      .saveToEs("recommendation/alsoFollowing")
+      .saveToEs("recommendation/alsoFollowing") */
     result
       .map(x => (x._1, x._2))
       .saveAsTextFile(args(2))

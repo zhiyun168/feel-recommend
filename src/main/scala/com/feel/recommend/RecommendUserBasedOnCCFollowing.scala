@@ -32,7 +32,7 @@ object RecommendUserBasedOnCCFollowing {
       .distinct(RDD_PARTITION_SIZE)
       .map(row =>
       row.split("\t")
-      ).filter(_.length == 3)
+      ).filter(_.length == 2)
       .filter(x => x(0).toLong >= REAL_USER_ID_BOUND && x(1).toLong >= REAL_USER_ID_BOUND)
 
     val RDDA = rawRDD.map(x => (x(0) + "\t" + x(1), "A"))
@@ -49,7 +49,7 @@ object RecommendUserBasedOnCCFollowing {
 
     val followRDD = sc.textFile(args(1))
       .map(_.split("\t"))
-      .filter(_.length == 3)
+      .filter(_.length == 2)
       .filter(x => x(0).toInt >= REAL_USER_ID_BOUND && x(1).toInt >= REAL_USER_ID_BOUND)
       .map(x => (x(1), x(0)))
       .reduceByKey((a, b) => a + "\t" + b)
@@ -100,7 +100,7 @@ object RecommendUserBasedOnCCFollowing {
 
     val followerNumber = sc.textFile(args(1))
       .map(_.split("\t"))
-      .filter(_.length == 3)
+      .filter(_.length == 2)
       .filter(x => x(0).toInt >= REAL_USER_ID_BOUND && x(1).toInt >= REAL_USER_ID_BOUND)
       .map(x => (x(0), 1))
       .reduceByKey(_ + _) // follower number
@@ -124,7 +124,7 @@ object RecommendUserBasedOnCCFollowing {
       val candidates = x._2.split("\t").map(_.split(",")).sortWith(_(1).toInt > _(1).toInt).map(_(0)).take(CANDIDATES_SIZE).toSeq
       CCUserRecommend(user, candidates)
     })
-      result.saveToEs("recommendation/CCFollowing")
+      //result.saveToEs("recommendation/CCFollowing")
       result.saveAsTextFile(args(3))
   }
 
