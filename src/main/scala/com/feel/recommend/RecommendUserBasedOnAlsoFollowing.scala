@@ -28,7 +28,7 @@ object RecommendUserBasedOnAlsoFollowing {
     val sc = new SparkContext(conf)
     val followList = sc.textFile(args(1))
       .map(_.split("\t"))
-      .filter(_.length == 3)
+      .filter(_.length == 2)
       .filter(x => x(0).toInt >= REAL_USER_ID_BOUND && x(1).toInt >= REAL_USER_ID_BOUND)
 
     COMMON_FOLLOWER_NUMBER = args(4).toInt
