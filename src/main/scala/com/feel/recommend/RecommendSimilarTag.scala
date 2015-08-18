@@ -5,10 +5,14 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkContext, SparkConf}
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
+import org.elasticsearch.spark._
 
 /**
  * Created by canoe on 8/12/15.
  */
+
+case class TagCandidate(tag: String, candidates: Seq[String])
+
 object RecommendSimilarTag {
 
   private val TAG_USED_NUMBER_FILTER = 100
@@ -51,9 +55,12 @@ object RecommendSimilarTag {
   def main(args: Array[String]) = {
 
     val conf = new SparkConf()
+    conf.set("es.mapping.id", "tag")
+    conf.set("es.nodes", args(0))
+
     val sc = new SparkContext(conf)
 
-    val tagInfoRDD = sc.textFile(args(0))
+    val tagInfoRDD = sc.textFile(args(1))
       .map(_.split("\t"))
       .filter(_.length == 3)
       .map(x => x.map(_.replaceAll("[ \t]", "").toLowerCase()))
@@ -80,7 +87,7 @@ object RecommendSimilarTag {
 
       (tag, sortedCoExitTag.map(x => (x._1, x._2 / sum)))
     })
-    coExitTagRDD.saveAsTextFile(args(1))
+    coExitTagRDD.saveAsTextFile(args(2))
 
     val topTagRDD = tagInfoRDD.map(x => ((x(1), x(2)), 1))
       .reduceByKey((a, b) => a + b)
@@ -100,13 +107,13 @@ object RecommendSimilarTag {
       .filter(x => x._1 != x._2)
 
     val topTagEditSimilarityRDD = topTagSimilarity(topTagCartesianRDD, editSimilarity)
-      topTagEditSimilarityRDD.saveAsTextFile(args(2))
+      topTagEditSimilarityRDD.saveAsTextFile(args(3))
     val topTagJaccardSimilarityRDD = topTagSimilarity(topTagCartesianRDD, jaccardSimilarity)
-      topTagJaccardSimilarityRDD.saveAsTextFile(args(3))
+      topTagJaccardSimilarityRDD.saveAsTextFile(args(4))
 
     val result = coExitTagRDD.cogroup(topTagEditSimilarityRDD, topTagJaccardSimilarityRDD)
     .map(x => {
-      val key = x._1
+      val key = x._1._1
       val value = (x._2._1 ++ x._2._2 ++ x._2._3).toSeq.flatten
       .foldLeft(new mutable.HashMap[(String, String), (Double, Double)]())((hashAverage, tuple) => {
         if (hashAverage.get(tuple._1).isEmpty)
@@ -116,10 +123,11 @@ object RecommendSimilarTag {
           hashAverage(tuple._1) = (preValue._1 + tuple._2, preValue._2 + 1D)
         }
         hashAverage
-      }).toArray.map(x => (x._1, x._2._1 / x._2._2)).sortWith(_._2 > _._2).mkString("|")
-      (key, value)
+      }).toSeq.map(x => (x._1, x._2._1 / x._2._2)).sortWith(_._2 > _._2).take(2).map(_._1._1)
+      TagCandidate(key, value)
     })
+    result.saveToEs("recommendation/similarTag")
+    result.saveAsTextFile(args(5))
 
-    result.saveAsTextFile(args(4))
   }
 }
