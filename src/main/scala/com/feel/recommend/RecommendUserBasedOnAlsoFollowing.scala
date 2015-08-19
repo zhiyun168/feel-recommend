@@ -116,7 +116,7 @@ object RecommendUserBasedOnAlsoFollowing {
       val value = x._2.toSeq
       val followSet = value.map(_._1).toSet
       val candidates = value.map(_._2).flatten.filter(x => !followSet(x._2) && x._2 != user).sortWith(_._1 > _._1)
-        .map(_._2).take(CANDIDATES_SIZE)
+        .map(_._2).distinct.take(CANDIDATES_SIZE)
       (user, candidates)
     })
     /*result
