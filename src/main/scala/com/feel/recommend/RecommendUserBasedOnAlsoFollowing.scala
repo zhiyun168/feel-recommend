@@ -6,6 +6,7 @@ package com.feel.recommend
 
 import org.apache.spark.{SparkConf, SparkContext}
 import org.elasticsearch.spark._
+import scala.util.Random.nextInt
 
 case class AlsoFlowingUserRecommend(user: String, candidates: Seq[String])
 
@@ -13,12 +14,22 @@ object RecommendUserBasedOnAlsoFollowing {
 
   private val REAL_USER_ID_BOUND = 1075
   private var USER_NUMBER_UP_BOUND = 4000
-  private val USER_NUMBER_UP_BOUND_FOR_COMMON = 1000
   private val USER_NUMBER_BOTTOM_BOUND = 2
   private val CANDIDATES_SIZE = 100
   private val RDD_PARTITION_SIZE = 100
   private var COMMON_FOLLOWER_NUMBER = 10
   private val COMMON_CANDIDATE_SIZE = 5
+  private val SAMPLE_THRESHOLD = 2000
+
+  def knuthShuffle[T] (x: Array[T]) = {
+    for(i <- (1 until x.length).reverse) {
+      val j = nextInt(i + 1)
+      val tmp = x(i)
+      x(i) = x(j)
+      x(j) = tmp
+    }
+    x
+  }
 
   def main(args: Array[String]) {
     val conf = new SparkConf()
@@ -51,8 +62,14 @@ object RecommendUserBasedOnAlsoFollowing {
       .map(x => (x._2._1, x._1)) // follower, rleader
       .reduceByKey((a, b) => a + "\t" + b) //action
       .map(x => x._2.split("\t"))
-      .filter(x => (x.length >= USER_NUMBER_BOTTOM_BOUND && x.length <= USER_NUMBER_UP_BOUND_FOR_COMMON))
-      .flatMap(x => {
+      .filter(x => (x.length >= USER_NUMBER_BOTTOM_BOUND && x.length <= USER_NUMBER_UP_BOUND))
+      .map(x => {
+      if (x.length < SAMPLE_THRESHOLD) {
+        x
+      } else {
+        knuthShuffle(x).take(SAMPLE_THRESHOLD)
+      }
+    }).flatMap(x => {
       val result = new Array[String](x.size * x.size)
       //case that user follows to many users and only one user just does not give a shot
       for (i <- 0 until x.length) {
