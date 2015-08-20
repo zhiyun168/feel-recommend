@@ -19,6 +19,7 @@ object RecommendUserBasedOnCCFollowing {
   private val RDD_PARTITION_SIZE = 10
   private val CC_PARTITION_SIZE = 100
   private val CC_SIZE_THRESHOLD = 1000
+  private val FOLLOWING_THRESHOLD = 500
 
   def main(args: Array[String]) = {
 
@@ -27,6 +28,14 @@ object RecommendUserBasedOnCCFollowing {
     conf.set("es.nodes", args(0))
 
     val sc = new SparkContext(conf)
+
+    val followerNumber = sc.textFile(args(1))
+      .map(_.split("\t"))
+      .filter(_.length == 2)
+      .filter(x => x(0).toInt >= REAL_USER_ID_BOUND && x(1).toInt >= REAL_USER_ID_BOUND)
+      .map(x => (x(0), 1))
+      .reduceByKey(_ + _) // follower number
+      .filter(x => x._2 <= FOLLOWER_NUMBER_UP_BOUND && x._2 >= FOLLOWER_NUMBER_BOTTOM_BOUND)
 
     val rawRDD = sc.textFile(args(1))
       .distinct(RDD_PARTITION_SIZE)
@@ -51,8 +60,12 @@ object RecommendUserBasedOnCCFollowing {
       .map(_.split("\t"))
       .filter(_.length == 2)
       .filter(x => x(0).toInt >= REAL_USER_ID_BOUND && x(1).toInt >= REAL_USER_ID_BOUND)
-      .map(x => (x(1), x(0)))
+      .map(x => (x(0), x(1)))
+      .join(followerNumber) // leader, follower, followerNumber
+      .map(x => (x._2._1, x._1)) // follower, leader
       .reduceByKey((a, b) => a + "\t" + b)
+      .map(x => (x._1, x._2.split("\t").toSeq))
+      .filter(_._2.length <= FOLLOWING_THRESHOLD)
 
     val recommendCandidates = cc.vertices.map(x => (x._2.toString, x._1.toString)).reduceByKey((a, b) => a + "\t" + b)
       .map(x => x._2.split("\t"))
@@ -86,25 +99,19 @@ object RecommendUserBasedOnCCFollowing {
     })
       .join(followRDD) // a, b, followings
       .map(x => (x._2._1, x._2._2)) // b, followings
-      .reduceByKey((a, b) => a + "\t" + b) // b recommended raw followings
+      .reduceByKey((a, b) => a ++ b) // b recommended raw followings
       .join(followRDD) // b, b following, b recommended raw followings
       .map(x => {
-      val followSet = x._2._2.split("\t").toSet // following set
-      val candidates = x._2._1.split("\t").filter(y => y != x._1 && !followSet(y)).distinct // filtered recommends
+      val followSet = x._2._2.toSet // following set
+      val candidates = x._2._1.filter(y => y != x._1 && !followSet(y)).distinct // filtered recommends
       (x._1, candidates) // b, candidates
-    }).filter(_._2.length != 0)
-      .flatMap(x => x._2.map(y => (y, x._1))) // b, candidate
+    })
+      .filter(_._2.length != 0)
+      .flatMap(x => x._2.map(y => (y, x._1))) // candidate, b
 
     FOLLOWER_NUMBER_BOTTOM_BOUND = args(4).toInt
     FOLLOWER_NUMBER_UP_BOUND = args(5).toInt
 
-    val followerNumber = sc.textFile(args(1))
-      .map(_.split("\t"))
-      .filter(_.length == 2)
-      .filter(x => x(0).toInt >= REAL_USER_ID_BOUND && x(1).toInt >= REAL_USER_ID_BOUND)
-      .map(x => (x(0), 1))
-      .reduceByKey(_ + _) // follower number
-      .filter(x => x._2 <= FOLLOWER_NUMBER_UP_BOUND && x._2 >= FOLLOWER_NUMBER_BOTTOM_BOUND)
 
     val recentlyActiveUser = sc.textFile(args(2))
       .map(_.split("\t"))
