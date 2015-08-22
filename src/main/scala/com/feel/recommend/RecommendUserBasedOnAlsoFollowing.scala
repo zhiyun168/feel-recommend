@@ -17,10 +17,9 @@ object RecommendUserBasedOnAlsoFollowing {
   private val USER_NUMBER_BOTTOM_BOUND = 2
   private val CANDIDATES_SIZE = 100
   private val RDD_PARTITION_SIZE = 100
-  private var COMMON_FOLLOWER_NUMBER = 10
-  private val COMMON_CANDIDATE_SIZE = 50
+  private var COMMON_FOLLOWER_NUMBER = 5
   private val SAMPLE_THRESHOLD = 2000
-  private val FOLLOWER_THRESHOLD = 500
+  private var FOLLOWER_THRESHOLD = 500
 
   def knuthShuffle[T](x: Array[T]) = {
     for (i <- (1 until x.length).reverse) {
@@ -38,6 +37,7 @@ object RecommendUserBasedOnAlsoFollowing {
     conf.set("es.nodes", args(0))
 
     USER_NUMBER_UP_BOUND = args(4).toInt
+    FOLLOWER_THRESHOLD = args(6).toInt
 
     val sc = new SparkContext(conf)
     val followList = sc.textFile(args(1))
@@ -68,14 +68,15 @@ object RecommendUserBasedOnAlsoFollowing {
       .map(x => (x._2._1, x._1)) // follower, rleader
       .reduceByKey((a, b) => a + "\t" + b) //action
       .map(x => x._2.split("\t"))
-      .filter(x => (x.length >= USER_NUMBER_BOTTOM_BOUND && x.length <= USER_NUMBER_UP_BOUND))
+      .filter(x => (x.length >= USER_NUMBER_BOTTOM_BOUND))
       .map(x => {
       if (x.length < SAMPLE_THRESHOLD) {
         x
       } else {
         knuthShuffle(x).take(SAMPLE_THRESHOLD)
       }
-    }).flatMap(x => {
+    })
+      .flatMap(x => {
       val result = new Array[String](x.size * x.size)
       //case that user follows to many users and only one user just does not give a shot
       for (i <- 0 until x.length) {
@@ -96,20 +97,15 @@ object RecommendUserBasedOnAlsoFollowing {
     }) // A, number, B
       .groupByKey()
       .map(x => {
-      val recommend = x._2.toSeq.sortWith(_._1 > _._1).take(COMMON_CANDIDATE_SIZE)
+      val recommend = x._2.toSeq.sortWith(_._1 > _._1).take(CANDIDATES_SIZE)
       (x._1, recommend)
     })
 
-    val filteredFollowList = followList
+    val following = followList
       .map(x => (x(1), x(0)))
-      .reduceByKey((a, b) => a + "\t" + b)
-      .map(x => (x._1, x._2.split("\t")))
-      .filter(x => x._2.length <= USER_NUMBER_UP_BOUND)
-      .flatMap(x => x._2.map(y => (y, x._1))) // followed, user
 
-
-    val result = commonFollower.join(filteredFollowList, RDD_PARTITION_SIZE) // followed, recommend, user
-      .map(x => (x._2._2, (x._1, x._2._1))) // user, following, recommend
+    val result = commonFollower.join(following, RDD_PARTITION_SIZE) // following, followingRecommend, user
+      .map(x => (x._2._2, (x._1, x._2._1))) // user, following, followingRecommend
       .groupByKey()
       .map(x => {
       val user = x._1
@@ -121,7 +117,7 @@ object RecommendUserBasedOnAlsoFollowing {
     })
     /*result
     .map(x => AlsoFlowingUserRecommend(x._1, x._2))
-    .saveToEs("recommendation/alsoFollowing") */
+    .saveToEs("recommendation/alsoFollowing")*/
     result
       .map(x => (x._1, x._2))
       .saveAsTextFile(args(3))
