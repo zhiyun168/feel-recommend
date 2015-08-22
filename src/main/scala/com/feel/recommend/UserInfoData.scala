@@ -56,7 +56,7 @@ object UserInfoData {
           val today = new SimpleDateFormat("yyyy-MM-dd").format(new Date())
           val yearDiff = today.substring(0, 4).toInt - birthdayYear.toInt
           val delta = {
-            if (today.substring(5, 10) > birthdayMonth + birthdayDay) 1
+            if (today.substring(5, 10) > birthdayMonth + "_" + birthdayDay) 1
             else -1
           }
           yearDiff + delta
