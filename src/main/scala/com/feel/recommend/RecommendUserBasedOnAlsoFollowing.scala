@@ -65,7 +65,7 @@ object RecommendUserBasedOnAlsoFollowing {
       .join(recentlyActiveUser) // r user
       .map(x => (x._1, x._2._1)) // rleader, follower
       .join(followerNumber)
-      .map(x => (x._2._1, x._1))
+      .map(x => (x._2._1, x._1)) // follower, rleader
       .reduceByKey((a, b) => a + "\t" + b) //action
       .map(x => x._2.split("\t"))
       .filter(x => (x.length >= USER_NUMBER_BOTTOM_BOUND && x.length <= USER_NUMBER_UP_BOUND))

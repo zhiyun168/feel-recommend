@@ -29,13 +29,15 @@ object RecommendUserBasedOnCCFollowing {
 
     val sc = new SparkContext(conf)
 
+    FOLLOWER_NUMBER_BOTTOM_BOUND = args(4).toInt
+    FOLLOWER_NUMBER_UP_BOUND = args(5).toInt
+
     val followerNumber = sc.textFile(args(1))
       .map(_.split("\t"))
       .filter(_.length == 2)
       .filter(x => x(0).toInt >= REAL_USER_ID_BOUND && x(1).toInt >= REAL_USER_ID_BOUND)
       .map(x => (x(0), 1))
-      .reduceByKey(_ + _) // follower number
-      .filter(x => x._2 <= FOLLOWER_NUMBER_UP_BOUND && x._2 >= FOLLOWER_NUMBER_BOTTOM_BOUND)
+      .reduceByKey((a, b) => a + b) // follower number
 
     val rawRDD = sc.textFile(args(1))
       .distinct(RDD_PARTITION_SIZE)
@@ -65,7 +67,8 @@ object RecommendUserBasedOnCCFollowing {
       .map(x => (x._2._1, x._1)) // follower, leader
       .reduceByKey((a, b) => a + "\t" + b)
       .map(x => (x._1, x._2.split("\t").toSeq))
-      .filter(_._2.length <= FOLLOWING_THRESHOLD)
+
+    val filteredFollowRDD = followRDD.filter(_._2.length <= FOLLOWING_THRESHOLD)
 
     val recommendCandidates = cc.vertices.map(x => (x._2.toString, x._1.toString)).reduceByKey((a, b) => a + "\t" + b)
       .map(x => x._2.split("\t"))
@@ -100,7 +103,7 @@ object RecommendUserBasedOnCCFollowing {
       .join(followRDD) // a, b, followings
       .map(x => (x._2._1, x._2._2)) // b, followings
       .reduceByKey((a, b) => a ++ b) // b recommended raw followings
-      .join(followRDD) // b, b following, b recommended raw followings
+      .join(filteredFollowRDD) // b, b following, b recommended raw followings
       .map(x => {
       val followSet = x._2._2.toSet // following set
       val candidates = x._2._1.filter(y => y != x._1 && !followSet(y)).distinct // filtered recommends
@@ -108,9 +111,6 @@ object RecommendUserBasedOnCCFollowing {
     })
       .filter(_._2.length != 0)
       .flatMap(x => x._2.map(y => (y, x._1))) // candidate, b
-
-    FOLLOWER_NUMBER_BOTTOM_BOUND = args(4).toInt
-    FOLLOWER_NUMBER_UP_BOUND = args(5).toInt
 
 
     val recentlyActiveUser = sc.textFile(args(2))
@@ -128,11 +128,11 @@ object RecommendUserBasedOnCCFollowing {
       .reduceByKey((a, b) => a + "\t" + b)
       .map(x => {
       val user = x._1
-      val candidates = x._2.split("\t").map(_.split(",")).sortWith(_(1).toInt > _(1).toInt).map(_(0)).take(CANDIDATES_SIZE).toSeq
+      val candidates = x._2.split("\t").map(_.split(",")).sortWith(_(1).toInt > _(1).toInt)
+        .filter(_(1).toInt < FOLLOWER_NUMBER_UP_BOUND).map(_(0)).distinct.take(CANDIDATES_SIZE).toSeq
       CCUserRecommend(user, candidates)
     })
-      //result.saveToEs("recommendation/CCFollowing")
-      result.saveAsTextFile(args(3))
+    //result.saveToEs("recommendation/CCFollowing")
+    result.saveAsTextFile(args(3))
   }
-
 }
