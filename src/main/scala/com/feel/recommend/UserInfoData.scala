@@ -64,7 +64,7 @@ object UserInfoData {
           }
           yearDiff + delta
         }
-        case _: String => 22
+        case _: String => -1
       }
       (user, "age:" + age.toString)
     }).saveAsTextFile(PREFIX + "user_attribution_age")
