@@ -28,7 +28,8 @@ object UserInfoFeature {
       val user = x._1
       x._2.foreach(attribution => {
         val tmp = attribution.split(":")
-        userAttribution(tmp(0)) = tmp(1)
+        if (tmp.length == 2)
+          userAttribution(tmp(0)) = tmp(1)
       })
       (user, userAttribution)
     })
@@ -57,7 +58,9 @@ object UserInfoFeature {
         if (size == 0) 0D else sum / size
       }
 
-      val ageAverage = mean(featureMapList.map(x => x.getOrElse("age", "")).filter(_ != "").map(_.toDouble))
+      val ageAverage = mean(featureMapList.map(x => x.getOrElse("age", ""))
+        .filter(x => x != "" && x != "-1")
+        .map(_.toDouble))
       val followingRatioAverage = mean(featureMapList.map(x => x.getOrElse("followingRatio", ""))
         .filter(_ != "")
         .map(_.toDouble))

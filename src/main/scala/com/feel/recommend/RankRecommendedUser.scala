@@ -3,12 +3,16 @@ package com.feel.recommend
 import breeze.numerics.abs
 import org.apache.spark.{SparkContext, SparkConf}
 
+import org.elasticsearch.spark._
+
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-
 /**
  * Created by canoe on 8/3/15.
  */
+
+case class UserRecommend(user: String, candidates: Seq[String])
+
 object RankRecommendedUser {
 
   private val REAL_ID_BOUND = 1075
@@ -17,16 +21,20 @@ object RankRecommendedUser {
 
   def main(args: Array[String]) = {
     val conf = new SparkConf()
+    conf.set("es.mapping.id", "user")
+    conf.set("es.nodes", args(0))
+
     val sc = new SparkContext(conf)
 
 
-    val userGender = sc.textFile(args(0))
+
+    val userGender = sc.textFile(args(1))
       .map(_.split("\t"))
       .filter(_.length == 2)
       .filter(_(0).toInt >= REAL_ID_BOUND)
       .map(x => (x(0), x(1)))
 
-    val userGenderFeature = sc.textFile(args(1))
+    val userGenderFeature = sc.textFile(args(2))
       .map(_.replaceAll("[()]", "").split(","))
       .map(x => (x(0), x(1)))
       .groupByKey()
@@ -50,13 +58,13 @@ object RankRecommendedUser {
       (x._1 + "\t" + x._2._2, x._2._1)
     })
 
-    val userFollowingAverageFeature = sc.textFile(args(2))
+    val userFollowingAverageFeature = sc.textFile(args(3))
       .map(_.replaceAll("[()]", "").split(","))
       .filter(_.length == 4)
       .map(x => (x.head, x.tail))
 
 
-    val rankedRecommendedUserRDD = sc.textFile(args(3))
+    val rankedRecommendedUserRDD = sc.textFile(args(4))
       .map(_.replaceAll("[a-zA-z() ]", "").split(","))
       .flatMap(x => {
       val user = x.head
@@ -93,9 +101,10 @@ object RankRecommendedUser {
     .groupByKey()
     .map(x => {
       val user = x._1
-      val candidates = x._2.toArray.sortWith(_._2 < _._2).map(_._1).take(CANDIDATE_SIZE).mkString(",")
+      val candidates = x._2.toArray.sortWith(_._2 < _._2).map(_._1).take(CANDIDATE_SIZE)
       (user, candidates)
     })
-    rankedRecommendedUserRDD.saveAsTextFile(args(4))
+    rankedRecommendedUserRDD.map(x => (x._1, x._2.mkString(","))).saveAsTextFile(args(5))
+    rankedRecommendedUserRDD.map(x => UserRecommend(x._1, x._2)).saveToEs("recommendation/rankedUser")
   }
 }
