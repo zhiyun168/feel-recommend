@@ -11,11 +11,11 @@ object RecommendHotCardBasedOnKLDivergence {
 
   private val REAL_USER_ID_BOUND = 1075
   private var HOT_SCORE_THRESHOLD = 200D
-  private val RDD_PARTITION_NUMBER = 100
-  private val CANDAIDTE_SIZE = 100
+  private val CANDIDATE_SIZE = 200
+  private var ALPHA = 3D
 
   def KLDivergence(p: Iterable[(Double, Double)]) = {
-    p.foldLeft(0D)((acc, value) => (acc + value._1 * log(value._1 / value._2)))
+    p.foldLeft(0D)((acc, value) => (acc + value._1 * log(ALPHA * value._1 / value._2)))
   }
 
   def parseHistoryHotScore(str: String) : ((String, String), Int) = {
@@ -113,6 +113,8 @@ object RecommendHotCardBasedOnKLDivergence {
     })
 
     HOT_SCORE_THRESHOLD = args(8).toDouble
+    ALPHA = args(9).toDouble
+
     userCardHotScore
       .map(x => {
       val tmp = x._1.split("\t")
@@ -127,7 +129,7 @@ object RecommendHotCardBasedOnKLDivergence {
       .groupByKey()
       .map(x => {
       val key = x._1
-      val value = x._2.toSeq.sortWith(_._1._2 > _._1._2).distinct.take(CANDAIDTE_SIZE).mkString("|")
+      val value = x._2.toSeq.sortWith(_._1._2 > _._1._2).distinct.take(CANDIDATE_SIZE).mkString("|")
       key + "|" + value
     })
       .saveAsTextFile (args(6))

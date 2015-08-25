@@ -15,11 +15,10 @@ object RecommendUserBasedOnCCFollowing {
   private val REAL_USER_ID_BOUND = 1075
   private var FOLLOWER_NUMBER_UP_BOUND = 0
   private var FOLLOWER_NUMBER_BOTTOM_BOUND = 0
-  private val CANDIDATES_SIZE = 200
+  private var CANDIDATES_SIZE = 200
   private val RDD_PARTITION_SIZE = 10
   private val CC_PARTITION_SIZE = 100
   private val CC_SIZE_THRESHOLD = 1000
-  private val FOLLOWING_THRESHOLD = 500
 
   def main(args: Array[String]) = {
 
@@ -31,6 +30,7 @@ object RecommendUserBasedOnCCFollowing {
 
     FOLLOWER_NUMBER_BOTTOM_BOUND = args(4).toInt
     FOLLOWER_NUMBER_UP_BOUND = args(5).toInt
+    CANDIDATES_SIZE = args(6).toInt
 
     val followerNumber = sc.textFile(args(1))
       .map(_.split("\t"))
@@ -68,7 +68,7 @@ object RecommendUserBasedOnCCFollowing {
       .reduceByKey((a, b) => a + "\t" + b)
       .map(x => (x._1, x._2.split("\t").toSeq))
 
-    val filteredFollowRDD = followRDD.filter(_._2.length <= FOLLOWING_THRESHOLD)
+    val filteredFollowRDD = followRDD.filter(_._2.length <= FOLLOWER_NUMBER_UP_BOUND)
 
     val recommendCandidates = cc.vertices.map(x => (x._2.toString, x._1.toString)).reduceByKey((a, b) => a + "\t" + b)
       .map(x => x._2.split("\t"))
@@ -100,10 +100,10 @@ object RecommendUserBasedOnCCFollowing {
         result.filter(_ != null).toSeq
       }
     })
-      .join(followRDD) // a, b, followings
-      .map(x => (x._2._1, x._2._2)) // b, followings
+      .join(filteredFollowRDD) // a, b, recommended raw followings
+      .map(x => (x._2._1, x._2._2)) // b, recommended raw followings
       .reduceByKey((a, b) => a ++ b) // b recommended raw followings
-      .join(filteredFollowRDD) // b, b following, b recommended raw followings
+      .join(followRDD) // b, b following, b recommended raw followings
       .map(x => {
       val followSet = x._2._2.toSet // following set
       val candidates = x._2._1.filter(y => y != x._1 && !followSet(y)).distinct // filtered recommends

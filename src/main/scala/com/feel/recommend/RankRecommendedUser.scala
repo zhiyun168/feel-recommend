@@ -16,8 +16,9 @@ case class UserRecommend(user: String, candidates: Seq[String])
 object RankRecommendedUser {
 
   private val REAL_ID_BOUND = 1075
-  private val CANDIDATE_SIZE = 100
+  private val CANDIDATES_SIZE = 100
   private val TAG_SIZE = 5
+  private var DIFF_GENDER_SCORE = 10D
 
   def main(args: Array[String]) = {
     val conf = new SparkConf()
@@ -64,6 +65,8 @@ object RankRecommendedUser {
       .map(x => (x.head, x.tail))
 
 
+    DIFF_GENDER_SCORE = args(6).toDouble
+
     val rankedRecommendedUserRDD = sc.textFile(args(4))
       .map(_.replaceAll("[a-zA-z() ]", "").split(","))
       .flatMap(x => {
@@ -92,7 +95,7 @@ object RankRecommendedUser {
       val distance = abs(userAverageFeature(0).toDouble - candidateFeature(0).toDouble) * 0.1D +
         abs(userAverageFeature(1).toDouble - candidateFeature(1).toDouble) * 0.5D +
         TAG_SIZE - (userAverageFeature(2).split("\\|").toSet & candidateFeature(2).split("\\|").toSet).size +
-        { if (userGender == candidateGender) 10D else 0D }
+        { if (userGender == candidateGender) DIFF_GENDER_SCORE else 0D }
 
       val user = userTmp(0)
       val candidate = candidateTmp(0)
@@ -101,7 +104,7 @@ object RankRecommendedUser {
     .groupByKey()
     .map(x => {
       val user = x._1
-      val candidates = x._2.toArray.sortWith(_._2 < _._2).map(_._1).take(CANDIDATE_SIZE)
+      val candidates = x._2.toArray.sortWith(_._2 < _._2).map(_._1).take(CANDIDATES_SIZE)
       (user, candidates)
     })
     rankedRecommendedUserRDD.map(x => (x._1, x._2.mkString(","))).saveAsTextFile(args(5))
