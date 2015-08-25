@@ -105,7 +105,7 @@ object RankRecommendedUser {
     .groupByKey()
     .map(x => {
       val user = x._1
-      val candidates = x._2.toArray.sortWith(_._2 < _._2).map(_._1).take(CANDIDATES_SIZE)
+      val candidates = x._2.toArray.sortWith(_._2 < _._2).map(_._1).distinct.take(CANDIDATES_SIZE)
       (user, candidates)
     })
     rankedRecommendedUserRDD.map(x => (x._1, x._2.mkString(","))).saveAsTextFile(args(5))
