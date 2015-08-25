@@ -15,7 +15,7 @@ object RecommendUserBasedOnAlsoFollowing {
   private val REAL_USER_ID_BOUND = 1075
   private var USER_NUMBER_UP_BOUND = 4000
   private val USER_NUMBER_BOTTOM_BOUND = 2
-  private val CANDIDATES_SIZE = 100
+  private val CANDIDATES_SIZE = 200
   private val RDD_PARTITION_SIZE = 100
   private var COMMON_FOLLOWER_NUMBER = 5
   private val SAMPLE_THRESHOLD = 2000
