@@ -15,7 +15,7 @@ object RecommendUserBasedOnCCFollowing {
   private val REAL_USER_ID_BOUND = 1075
   private var FOLLOWER_NUMBER_UP_BOUND = 0
   private var FOLLOWER_NUMBER_BOTTOM_BOUND = 0
-  private val CANDIDATES_SIZE = 100
+  private val CANDIDATES_SIZE = 200
   private val RDD_PARTITION_SIZE = 10
   private val CC_PARTITION_SIZE = 100
   private val CC_SIZE_THRESHOLD = 1000
