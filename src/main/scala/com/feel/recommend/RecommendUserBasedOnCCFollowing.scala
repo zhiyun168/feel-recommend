@@ -53,7 +53,7 @@ object RecommendUserBasedOnCCFollowing {
     val edgeRDD = allRDD
       .distinct(RDD_PARTITION_SIZE)
       .map(x => x._1.split("\t"))
-      .map(x => new Edge(x(0).toLong, x(1).toLong, 1L))
+      .map(x => new Edge(x(1).toLong, x(0).toLong, 1L))
 
     val graph = Graph.fromEdges(edgeRDD, None)
     val cc = graph.connectedComponents()
@@ -128,9 +128,10 @@ object RecommendUserBasedOnCCFollowing {
       .reduceByKey((a, b) => a + "\t" + b)
       .map(x => {
       val user = x._1
-      val candidates = x._2.split("\t").map(_.split(",")).sortWith(_(1).toInt > _(1).toInt)
-        .filter(_(1).toInt < FOLLOWER_NUMBER_UP_BOUND).map(_(0)).distinct.take(CANDIDATES_SIZE).toSeq
-      CCUserRecommend(user, candidates)
+      val candidates = x._2.split("\t").map(_.split(","))
+        .filter(_(1).toInt < FOLLOWER_NUMBER_UP_BOUND)
+        .sortWith(_(1).toInt > _(1).toInt).map(_(0)).distinct.take(CANDIDATES_SIZE).toSeq
+      (user, candidates)
     })
     //result.saveToEs("recommendation/CCFollowing")
     result.saveAsTextFile(args(3))
