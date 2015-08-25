@@ -16,7 +16,7 @@ case class UserRecommend(user: String, candidates: Seq[String])
 object RankRecommendedUser {
 
   private val REAL_ID_BOUND = 1075
-  private val CANDIDATES_SIZE = 100
+  private var CANDIDATES_SIZE = 100
   private val TAG_SIZE = 5
   private var DIFF_GENDER_SCORE = 10D
 
@@ -66,6 +66,7 @@ object RankRecommendedUser {
 
 
     DIFF_GENDER_SCORE = args(6).toDouble
+    CANDIDATES_SIZE = args(7).toInt
 
     val rankedRecommendedUserRDD = sc.textFile(args(4))
       .map(_.replaceAll("[a-zA-z() ]", "").split(","))

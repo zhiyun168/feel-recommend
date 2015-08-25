@@ -11,8 +11,9 @@ object RecommendHotCardBasedOnKLDivergence {
 
   private val REAL_USER_ID_BOUND = 1075
   private var HOT_SCORE_THRESHOLD = 200D
-  private val CANDIDATE_SIZE = 200
+  private val CANDIDATES_SIZE = 200
   private var ALPHA = 3D
+  private var NEW_USER_BOTTOM_LIKED_NUMBER = 3
 
   def KLDivergence(p: Iterable[(Double, Double)]) = {
     p.foldLeft(0D)((acc, value) => (acc + value._1 * log(ALPHA * value._1 / value._2)))
@@ -83,13 +84,15 @@ object RecommendHotCardBasedOnKLDivergence {
         ((userLikeCardInfo._1._1, userLikeCardInfo._1._3), (userLikeCardInfo._1._2, userLikeCardInfo._2)))
     }).leftOuterJoin(userHistoryMaxValueRDD) // ((user, F / N), ((card, count), historyCount))
 
+    NEW_USER_BOTTOM_LIKED_NUMBER = args(10).toInt
+
     val userCardHotScore = valueRDD
       .map(x => {
       x._2._2 match {
         case Some(historyCount) =>
           (x._1._1 + "\t" + x._2._1._1, (x._2._1._2 + 1D, historyCount + 1D))
         case None =>
-          (x._1._1 + "\t" + x._2._1._1, (x._2._1._2 + 1D, 1D))
+          (x._1._1 + "\t" + x._2._1._1, (x._2._1._2 + 1D, NEW_USER_BOTTOM_LIKED_NUMBER.toDouble))
       }
     }).groupByKey() // ((user, card), scoreTuple)
       .map(x => {
@@ -129,7 +132,7 @@ object RecommendHotCardBasedOnKLDivergence {
       .groupByKey()
       .map(x => {
       val key = x._1
-      val value = x._2.toSeq.sortWith(_._1._2 > _._1._2).distinct.take(CANDIDATE_SIZE).mkString("|")
+      val value = x._2.toSeq.sortWith(_._1._2 > _._1._2).distinct.take(CANDIDATES_SIZE).mkString("|")
       key + "|" + value
     })
       .saveAsTextFile (args(6))
@@ -140,7 +143,7 @@ object RecommendHotCardBasedOnKLDivergence {
         case Some(historyCount) =>
           (x._1, max(x._2._1._2, historyCount))
         case None =>
-          (x._1, max(x._2._1._2, 1))
+          (x._1, max(x._2._1._2, NEW_USER_BOTTOM_LIKED_NUMBER))
       })
       .groupByKey()
       .map(x => {
