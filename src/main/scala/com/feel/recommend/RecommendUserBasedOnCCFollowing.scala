@@ -3,9 +3,12 @@ package com.feel.recommend
 /**
  * Created by canoe on 7/11/15.
  */
+
+import breeze.linalg.min
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.graphx.{Edge, Graph}
 import org.elasticsearch.spark._
+import scala.util.Random.nextInt
 
 case class CCUserRecommend(user: String, candidates: Seq[String])
 
@@ -15,10 +18,21 @@ object RecommendUserBasedOnCCFollowing {
   private val REAL_USER_ID_BOUND = 1075
   private var FOLLOWER_NUMBER_UP_BOUND = 0
   private var FOLLOWER_NUMBER_BOTTOM_BOUND = 0
+  private val FOLLOWING_NUMBER_THRESHOLD = 5000
   private var CANDIDATES_SIZE = 200
-  private val RDD_PARTITION_SIZE = 10
-  private val CC_PARTITION_SIZE = 100
+  private val RDD_PARTITION_SIZE = 100
   private val CC_SIZE_THRESHOLD = 1000
+
+  def knuthShuffle[T](x: Array[T]) = {
+    for (i <- (1 until x.length).reverse) {
+      val j = nextInt(i + 1)
+      val tmp = x(i)
+      x(i) = x(j)
+      x(j) = tmp
+    }
+    x
+  }
+
 
   def main(args: Array[String]) = {
 
@@ -66,26 +80,22 @@ object RecommendUserBasedOnCCFollowing {
       .join(followerNumber) // leader, follower, followerNumber
       .map(x => (x._2._1, x._1)) // follower, leader
       .reduceByKey((a, b) => a + "\t" + b)
-      .map(x => (x._1, x._2.split("\t").toSeq))
+      .map(x => (x._1, x._2.split("\t").toSeq)) // follower, following List
 
-    val filteredFollowRDD = followRDD.filter(_._2.length <= FOLLOWER_NUMBER_UP_BOUND)
+    val filteredFollowRDD = followRDD.filter(_._2.length <= FOLLOWING_NUMBER_THRESHOLD)
 
     val recommendCandidates = cc.vertices.map(x => (x._2.toString, x._1.toString)).reduceByKey((a, b) => a + "\t" + b)
       .map(x => x._2.split("\t"))
       .flatMap(x => {
       val length = x.length
       if (length >= CC_SIZE_THRESHOLD) {
-        val partitionSize = CC_PARTITION_SIZE
-        val partitionNumber = length / partitionSize
-        val result = new Array[(String, String)](partitionNumber * partitionSize * partitionSize)
-        for (i <- 0 until partitionNumber) {
-          val resultStartIndex = i * partitionSize * partitionSize
-          val xStartIndex = i * partitionSize
-          for (j <- 0 until partitionSize) {
-            for (k <- 0 until partitionSize) {
-              if (j != k) {
-                result(resultStartIndex + j * partitionSize + k) = (x(xStartIndex + j), x(xStartIndex + k))
-              }
+        val number = min(length / CC_SIZE_THRESHOLD, 20)
+        val result = new Array[(String, String)](number * CC_SIZE_THRESHOLD * CC_SIZE_THRESHOLD)
+        for (it <- 0 until number) {
+          val tmpX = knuthShuffle(x).take(CC_SIZE_THRESHOLD)
+          for (i <- 0 until CC_SIZE_THRESHOLD) {
+            for (j <- 0 until CC_SIZE_THRESHOLD) {
+              result(it * CC_SIZE_THRESHOLD * CC_SIZE_THRESHOLD +  i * CC_SIZE_THRESHOLD + j) = (tmpX(i), tmpX(j))
             }
           }
         }
@@ -100,6 +110,7 @@ object RecommendUserBasedOnCCFollowing {
         result.filter(_ != null).toSeq
       }
     })
+      .distinct(RDD_PARTITION_SIZE)
       .join(filteredFollowRDD) // a, b, recommended raw followings
       .map(x => (x._2._1, x._2._2)) // b, recommended raw followings
       .reduceByKey((a, b) => a ++ b) // b recommended raw followings
@@ -129,8 +140,7 @@ object RecommendUserBasedOnCCFollowing {
       .map(x => {
       val user = x._1
       val candidates = x._2.split("\t").map(_.split(","))
-        .filter(_(1).toInt < FOLLOWER_NUMBER_UP_BOUND)
-        .sortWith(_(1).toInt > _(1).toInt).map(_(0)).distinct.take(CANDIDATES_SIZE).toSeq
+        .sortWith(_(1).toInt > _(1).toInt).map(_(0)).distinct.take(CANDIDATES_SIZE).toSeq.mkString(",")
       (user, candidates)
     })
     //result.saveToEs("recommendation/CCFollowing")
