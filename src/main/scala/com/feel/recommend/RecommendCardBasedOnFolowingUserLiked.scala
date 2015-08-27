@@ -109,7 +109,7 @@ object RecommendCardBasedOnFollowingUserLiked {
       val candidates = x._2.toSeq.sortWith(_._2 > _._2).map(_._1).take(CANDIDATE_SIZE)
       CardRecommend(user, candidates)
     })
-    result.saveToEs("recommendation/followingUserLikedCard")
+    result.saveToEs(args(7) + "/CARD")
     result.saveAsTextFile(args(4))
   }
 }

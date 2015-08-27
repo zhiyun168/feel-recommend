@@ -109,6 +109,6 @@ object RankRecommendedUser {
       (user, candidates)
     })
     rankedRecommendedUserRDD.map(x => (x._1, x._2.mkString(","))).saveAsTextFile(args(5))
-    rankedRecommendedUserRDD.map(x => UserRecommend(x._1, x._2)).saveToEs("recommendation/USER")
+    rankedRecommendedUserRDD.map(x => UserRecommend(x._1, x._2)).saveToEs(args(8) + "/USER")
   }
 }
