@@ -101,6 +101,18 @@ object RecommendHotCardBasedOnKLDivergence {
       (cardInfo, score)
     })
 
+    userCardHotScore.map(x => {
+      val tmp = x._1.split("\t")
+      (tmp(0), (tmp(1), x._2))
+    }).groupByKey()
+    .map(x => {
+      x._2.size match {
+        case 1 => x._2.head
+        case _ => x._2.toArray.sortWith(_._2 > _._2).head
+      }
+    }).saveAsTextFile(args(11))
+
+
     val cardSonTag = sc.textFile(args(4)) // 12 hour data
       .map(_.split("\t"))
       .filter(_.length == 2)
