@@ -89,12 +89,12 @@ object RecommendHotCardBasedOnKLDivergence {
 
     val userCardHotScore = valueRDD
       .map(x => {
-      //x._2._2 match {
-      //  case Some(historyCount) =>
-      //    (x._1._1 + "\t" + x._2._1._1, (x._2._1._2 + 1D, historyCount + 1D))
-      //  case None =>
-      //   (x._1._1 + "\t" + x._2._1._1, (x._2._1._2 + 1D, NEW_USER_BOTTOM_LIKED_NUMBER.toDouble))
-      //}
+      /*x._2._2 match {
+        case Some(historyCount) =>
+          (x._1._1 + "\t" + x._2._1._1, (x._2._1._2 + 1D, log(historyCount + 1D))) // under test
+        case None =>
+         (x._1._1 + "\t" + x._2._1._1, (x._2._1._2 + 1D, NEW_USER_BOTTOM_LIKED_NUMBER.toDouble))
+      }*/
       (x._1._1 + "\t" + x._2._1._1, (x._2._1._2 + 1D, NEW_USER_BOTTOM_LIKED_NUMBER.toDouble))
 
     }).groupByKey() // ((user, card), scoreTuple)
