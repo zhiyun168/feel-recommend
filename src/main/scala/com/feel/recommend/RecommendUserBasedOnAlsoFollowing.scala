@@ -103,7 +103,7 @@ object RecommendUserBasedOnAlsoFollowing {
     })
 
     val following = followList
-      .map(x => (x(1), x(0)))
+      .map(x => (x(0), x(1)))
 
     val result = commonFollower.join(following, RDD_PARTITION_SIZE) // following, followingRecommend, user
       .map(x => (x._2._2, (x._1, x._2._1))) // user, following, followingRecommend
