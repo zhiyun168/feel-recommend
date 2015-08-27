@@ -1,5 +1,6 @@
 package com.feel.recommend
 
+import breeze.numerics.{abs, exp}
 import org.apache.spark.{SparkContext, SparkConf}
 import scala.collection.mutable
 import scala.math.{log, max}
@@ -12,11 +13,11 @@ object RecommendHotCardBasedOnKLDivergence {
   private val REAL_USER_ID_BOUND = 1075
   private var HOT_SCORE_THRESHOLD = 200D
   private val CANDIDATES_SIZE = 200
-  private var ALPHA = 3D
   private var NEW_USER_BOTTOM_LIKED_NUMBER = 3
+  private var HALF_TIME = 8D
 
   def KLDivergence(p: Iterable[(Double, Double)]) = {
-    p.foldLeft(0D)((acc, value) => (acc + value._1 * log(ALPHA * value._1 / value._2)))
+    p.foldLeft(0D)((acc, value) => (acc + value._1 * log(value._1 / value._2)))
   }
 
   def parseHistoryHotScore(str: String) : ((String, String), Int) = {
@@ -88,12 +89,14 @@ object RecommendHotCardBasedOnKLDivergence {
 
     val userCardHotScore = valueRDD
       .map(x => {
-      x._2._2 match {
-        case Some(historyCount) =>
-          (x._1._1 + "\t" + x._2._1._1, (x._2._1._2 + 1D, historyCount + 1D))
-        case None =>
-          (x._1._1 + "\t" + x._2._1._1, (x._2._1._2 + 1D, NEW_USER_BOTTOM_LIKED_NUMBER.toDouble))
-      }
+      //x._2._2 match {
+      //  case Some(historyCount) =>
+      //    (x._1._1 + "\t" + x._2._1._1, (x._2._1._2 + 1D, historyCount + 1D))
+      //  case None =>
+      //   (x._1._1 + "\t" + x._2._1._1, (x._2._1._2 + 1D, NEW_USER_BOTTOM_LIKED_NUMBER.toDouble))
+      //}
+      (x._1._1 + "\t" + x._2._1._1, (x._2._1._2 + 1D, NEW_USER_BOTTOM_LIKED_NUMBER.toDouble))
+
     }).groupByKey() // ((user, card), scoreTuple)
       .map(x => {
       val cardInfo = x._1
@@ -101,16 +104,29 @@ object RecommendHotCardBasedOnKLDivergence {
       (cardInfo, score)
     })
 
+    val decay = abs(args(11).toDouble)
+    HALF_TIME = args(12).toDouble
+
+    val lambda = log(2) / HALF_TIME
+    val decayFactor = exp(-lambda * decay)
+
     userCardHotScore.map(x => {
       val tmp = x._1.split("\t")
       (tmp(0), (tmp(1), x._2))
     }).groupByKey()
     .map(x => {
       x._2.size match {
-        case 1 => x._2.head
-        case _ => x._2.toArray.sortWith(_._2 > _._2).head
+        case 1 => {
+          val value = x._2.head
+          (value._1, value._2, value._2 * decayFactor)
+        }
+        case _ => {
+          val value = x._2.toArray.sortWith(_._2 > _._2).head
+          (value._1, value._2, value._2 * decayFactor)
+        }
       }
-    }).saveAsTextFile(args(11))
+    }).sortBy(_._3)
+      .saveAsTextFile(args(8))
 
 
     val cardSonTag = sc.textFile(args(4)) // 12 hour data
@@ -127,9 +143,7 @@ object RecommendHotCardBasedOnKLDivergence {
       (x._2._2, (x._2._1, x._1)) // card, (parentTag, sonTag)  - tag
     })
 
-    HOT_SCORE_THRESHOLD = args(8).toDouble
-    ALPHA = args(9).toDouble
-
+    HOT_SCORE_THRESHOLD = args(9).toDouble
     userCardHotScore
       .map(x => {
       val tmp = x._1.split("\t")
