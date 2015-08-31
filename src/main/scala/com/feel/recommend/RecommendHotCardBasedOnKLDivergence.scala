@@ -110,24 +110,25 @@ object RecommendHotCardBasedOnKLDivergence {
     val lambda = log(2) / HALF_TIME
     val decayFactor = exp(-lambda * decay)
 
-    userCardHotScore.map(x => {
+    val decayedUserCardHotScore = userCardHotScore
+      .map(x => {
       val tmp = x._1.split("\t")
       (tmp(0), (tmp(1), x._2))
     }).groupByKey()
     .map(x => {
+      val user = x._1
       x._2.size match {
         case 1 => {
           val value = x._2.head
-          (value._1, value._2, value._2 * decayFactor)
+          (user, value._1, value._2, value._2 * decayFactor)
         }
         case _ => {
           val value = x._2.toArray.sortWith(_._2 > _._2).head
-          (value._1, value._2, value._2 * decayFactor)
+          (user, value._1, value._2, value._2 * decayFactor)
         }
       }
-    }).sortBy(_._3)
-      .saveAsTextFile(args(8))
-
+    })
+    decayedUserCardHotScore.sortBy(_._3).saveAsTextFile(args(8))
 
     val cardSonTag = sc.textFile(args(4)) // 12 hour data
       .map(_.split("\t"))
@@ -144,10 +145,9 @@ object RecommendHotCardBasedOnKLDivergence {
     })
 
     HOT_SCORE_THRESHOLD = args(9).toDouble
-    userCardHotScore
+    decayedUserCardHotScore
       .map(x => {
-      val tmp = x._1.split("\t")
-      (tmp(1), (tmp(0), x._2)) // card, (user, score)
+      (x._2, (x._1, x._4)) //card, (user, score)
     })
       .join(cardParentTag) // card, ((user, score), tag)
       .map(x => {
