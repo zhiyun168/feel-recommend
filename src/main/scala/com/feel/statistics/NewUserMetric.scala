@@ -26,7 +26,7 @@ object NewUserMetric {
           val yearDiff = today.substring(0, 4).toInt - birthdayYear.toInt
           val delta = {
             if (today.substring(5, 10) > birthdayMonth + "-" + birthdayDay) 1
-            else -1
+            else 0
           }
           yearDiff + delta
         }
