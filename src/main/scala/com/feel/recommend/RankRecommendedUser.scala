@@ -69,7 +69,7 @@ object RankRecommendedUser {
     CANDIDATES_SIZE = args(7).toInt
 
     val rankedRecommendedUserRDD = sc.textFile(args(4))
-      .map(_.replaceAll("[a-zA-z() ]", "").split(","))
+      .map(_.replaceAll("[a-zA-Z() ]", "").split(","))
       .flatMap(x => {
       val user = x.head
       val candidates = x.tail
