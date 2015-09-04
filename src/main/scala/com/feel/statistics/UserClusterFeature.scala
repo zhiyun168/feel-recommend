@@ -83,7 +83,7 @@ object UserClusterFeature {
       .filter(_.length == 2)
       .filter(_(0).toInt >= REAL_USER_ID_BOUND)
       .map(x => x(0) + "\t8:" + {
-      if (x(1) == "f") "0" else if (x(1) == "m") "1" else "2"
+      if (x(1) == "f") "-1" else if (x(1) == "m") "1" else "0" // norm
     })
 
     userGender.union(userLikeNumber).union(userLikedNumber).union(userFollowerNumber).union(userFollowingNumber)
@@ -93,12 +93,16 @@ object UserClusterFeature {
       .groupByKey()
       .map(x => {
       val norm = {
-        val normTmp = x._2.map(_.split(":")).filter(_(0) == "7").head(1).toDouble
-        if (normTmp == 0) 1 else normTmp
+        val tmp = x._2.map(_.split(":")).filter(_(0) == "7")
+        if (tmp.size == 0) -1
+        else {
+          val normTmp = tmp.head(1).toDouble
+          if (normTmp == 0) 1 else normTmp
+        }
       }
-      x._1 + "\t" + x._2.map(_.split(":")).map(x => {
-        if (x(0) != "7") x(0) + ":" + (x(1).toDouble / norm).toString
-        else x
+      x._1 + "\t" + x._2.map(_.split(":")).map(y => {
+        if (y(0) != "7" && y(0) != "8") y(0) + ":" + (y(1).toDouble / norm).toString
+        else y(0) + ":" + y(1)
       }).mkString("\t")
     }).saveAsTextFile(args(5))
   }
