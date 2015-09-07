@@ -6,6 +6,7 @@ package com.feel.recommend
 
 import org.apache.spark.{SparkConf, SparkContext}
 import org.elasticsearch.spark._
+import scala.collection.immutable.HashSet
 import scala.util.Random.nextInt
 
 case class AlsoFlowingUserRecommend(user: String, candidates: Seq[String])
@@ -105,17 +106,33 @@ object RecommendUserBasedOnAlsoFollowing {
     val following = followList
       .map(x => (x(0), x(1)))
 
+    val userDislike = sc.textFile(args(8))
+      .map(_.split("\t"))
+      .map(x => (x(0), x(1)))
+      .groupByKey()
+      .map(x => {
+      (x._1, x._2.toSet)
+    })
+
     val result = commonFollower.join(following, RDD_PARTITION_SIZE) // following, followingRecommend, user
       .map(x => (x._2._2, (x._1, x._2._1))) // user, following, followingRecommend
       .groupByKey()
-      .map(x => {
+      .leftOuterJoin(userDislike) // user, dislikeSet
+      .map(x => {// user, ((following, followingRecommend), dislikeSet)
       val user = x._1
-      val value = x._2.toSeq
+      val dislikeSet = x._2._2 match {
+        case Some(set) => set
+        case None => new HashSet[String]()
+      }
+      val value = x._2._1.toSeq
       val followSet = value.map(_._1).toSet
-      val candidates = value.map(_._2).flatten.filter(x => !followSet(x._2) && x._2 != user).sortWith(_._1 > _._1)
+      val candidates = value.map(_._2).flatten.filter(x => !dislikeSet(x._2) && !followSet(x._2) && x._2 != user)
+        .sortWith(_
+        ._1 > _._1)
         .map(_._2).distinct.take(CANDIDATES_SIZE)
       (user, candidates)
     })
+
     /*result
     .map(x => AlsoFlowingUserRecommend(x._1, x._2))
     .saveToEs("recommendation/alsoFollowing")*/
