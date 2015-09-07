@@ -4,10 +4,12 @@ package com.feel.recommend
  * Created by canoe on 7/11/15.
  */
 
+
 import breeze.linalg.min
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.graphx.{Edge, Graph}
 import org.elasticsearch.spark._
+import scala.collection.immutable.HashSet
 import scala.util.Random.nextInt
 
 case class CCUserRecommend(user: String, candidates: Seq[String])
@@ -84,6 +86,12 @@ object RecommendUserBasedOnCCFollowing {
 
     val filteredFollowRDD = followRDD.filter(_._2.length <= FOLLOWING_NUMBER_THRESHOLD)
 
+    val userDislikeSet = sc.textFile(args(7))
+      .map(_.split("\t"))
+      .map(x => (x(0), x(1)))
+      .groupByKey()
+      .map(x => (x._1, x._2.toSet))
+
     val recommendCandidates = cc.vertices.map(x => (x._2.toString, x._1.toString)).reduceByKey((a, b) => a + "\t" + b)
       .map(x => x._2.split("\t"))
       .flatMap(x => {
@@ -114,10 +122,16 @@ object RecommendUserBasedOnCCFollowing {
       .join(filteredFollowRDD) // a, b, recommended raw followings
       .map(x => (x._2._1, x._2._2)) // b, recommended raw followings
       .reduceByKey((a, b) => a ++ b) // b recommended raw followings
-      .join(followRDD) // b, b following, b recommended raw followings
+      .join(followRDD) // b, b recommended raw followings, b following
+      .leftOuterJoin(userDislikeSet)
       .map(x => {
-      val followSet = x._2._2.toSet // following set
-      val candidates = x._2._1.filter(y => y != x._1 && !followSet(y)).distinct // filtered recommends
+      val dislikeSet = x._2._2 match {
+        case Some(set) => set
+        case None => new HashSet[String]()
+      }
+      val followSet = x._2._1._2.toSet // following set
+      val candidates = x._2._1._1.filter(y => y != x._1 && !dislikeSet(y) && !followSet(y)).distinct // filtered
+      // recommends
       (x._1, candidates) // b, candidates
     })
       .filter(_._2.length != 0)
@@ -145,5 +159,6 @@ object RecommendUserBasedOnCCFollowing {
     })
     //result.saveToEs("recommendation/CCFollowing")
     result.saveAsTextFile(args(3))
+
   }
 }
