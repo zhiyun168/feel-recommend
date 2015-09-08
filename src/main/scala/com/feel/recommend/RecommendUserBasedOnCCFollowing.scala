@@ -11,6 +11,7 @@ import org.apache.spark.graphx.{Edge, Graph}
 import org.elasticsearch.spark._
 import scala.collection.immutable.HashSet
 import scala.util.Random.nextInt
+import scala.util.parsing.json.JSON
 
 case class CCUserRecommend(user: String, candidates: Seq[String])
 
@@ -87,10 +88,23 @@ object RecommendUserBasedOnCCFollowing {
     val filteredFollowRDD = followRDD.filter(_._2.length <= FOLLOWING_NUMBER_THRESHOLD)
 
     val userDislikeSet = sc.textFile(args(7))
+      .map(x => {
+      val xMap = JSON.parseFull(x)
+      xMap match {
+        case Some(map: Map[String, Any]) => {
+          if (map("action") == "dislike")
+            map("id") + "\t" + map("candidates").toString().replaceAll("[\\[\\]A-Za-z()]", "")
+          else "?"
+        }
+        case _ => "?"
+      }
+    }).filter(_ != "?")
       .map(_.split("\t"))
       .map(x => (x(0), x(1)))
       .groupByKey()
-      .map(x => (x._1, x._2.toSet))
+      .map(x => {
+      (x._1, x._2.toSet)
+    })
 
     val recommendCandidates = cc.vertices.map(x => (x._2.toString, x._1.toString)).reduceByKey((a, b) => a + "\t" + b)
       .map(x => x._2.split("\t"))
