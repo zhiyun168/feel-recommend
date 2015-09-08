@@ -8,6 +8,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.elasticsearch.spark._
 import scala.collection.immutable.HashSet
 import scala.util.Random.nextInt
+import scala.util.parsing.json.JSON
 
 case class AlsoFlowingUserRecommend(user: String, candidates: Seq[String])
 
@@ -106,7 +107,18 @@ object RecommendUserBasedOnAlsoFollowing {
     val following = followList
       .map(x => (x(0), x(1)))
 
-    val userDislike = sc.textFile(args(8))
+    val userDislikeSet = sc.textFile(args(8))
+      .map(x => {
+      val xMap = JSON.parseFull(x)
+      xMap match {
+        case Some(map: Map[String, Any]) => {
+          if (map("action") == "dislike")
+            map("id") + "\t" + map("candidates").toString().replaceAll("[\\[\\]A-Za-z()]", "")
+          else "?"
+        }
+        case _ => "?"
+      }
+    }).filter(_ != "?")
       .map(_.split("\t"))
       .map(x => (x(0), x(1)))
       .groupByKey()
@@ -117,7 +129,7 @@ object RecommendUserBasedOnAlsoFollowing {
     val result = commonFollower.join(following, RDD_PARTITION_SIZE) // following, followingRecommend, user
       .map(x => (x._2._2, (x._1, x._2._1))) // user, following, followingRecommend
       .groupByKey()
-      .leftOuterJoin(userDislike) // user, dislikeSet
+      .leftOuterJoin(userDislikeSet) // user, dislikeSet
       .map(x => {// user, ((following, followingRecommend), dislikeSet)
       val user = x._1
       val dislikeSet = x._2._2 match {
