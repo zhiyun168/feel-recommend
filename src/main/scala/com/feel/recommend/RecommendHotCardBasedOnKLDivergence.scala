@@ -15,6 +15,7 @@ object RecommendHotCardBasedOnKLDivergence {
   private val CANDIDATES_SIZE = 200
   private var NEW_USER_BOTTOM_LIKED_NUMBER = 3
   private var HALF_TIME = 8D
+  private val FOLLOWER_BOUND = Map(("L" -> (0, 100)), ("M" -> (100, 500)), ("H" -> (500, 2147483647)))
 
   def KLDivergence(p: Iterable[(Double, Double)]) = {
     p.foldLeft(0D)((acc, value) => (acc + value._1 * log(value._1 / value._2)))
@@ -33,6 +34,8 @@ object RecommendHotCardBasedOnKLDivergence {
 
     val conf = new SparkConf()
     val sc = new SparkContext(conf)
+
+    val userLevel = args(13)
 
     val userHistoryMaxValueRDD = sc.textFile(args(0)) //((user, F / N), count)
       .map(parseHistoryHotScore(_))
@@ -60,6 +63,11 @@ object RecommendHotCardBasedOnKLDivergence {
       .map(x => (x(0), x(1))) // user, follower
       .groupByKey()
       .map(x => (x._1, x._2.toSet)) //user, followerSet
+      .filter(x => {
+      val followerSize = x._2.size
+      val followerBound = FOLLOWER_BOUND(userLevel)
+      followerSize >= followerBound._1 && followerSize < followerBound._2
+    })
 
     val valueRDD = followerRDD
       .join(likedRDD) // user, (followerSet, Iterable(cUser, card))
