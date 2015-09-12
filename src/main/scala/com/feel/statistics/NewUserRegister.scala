@@ -25,7 +25,7 @@ object NewUserRegister {
 
     val newUser = RegisterGender.count()
 
-    val lastDayRegisterUser = RegisterGender.map(x => (x._2, 1))
+    val lastDayRegisterUser = RegisterGender.map(x => (x._1, 1))
       .reduceByKey((a, b) => a + b)
       .map(x => x._2)
     lastDayRegisterUser.saveAsTextFile(args(1))
