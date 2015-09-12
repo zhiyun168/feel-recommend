@@ -9,7 +9,7 @@ object ActiveNewUserOf3Days {
 
   def main (args: Array[String]) {
     val conf = new SparkConf()
-    val sc = new SparkContext()
+    val sc = new SparkContext(conf)
 
     val activeUser = sc.textFile(args(0))
       .map(_.split("\t"))
@@ -28,7 +28,7 @@ object ActiveNewUserOf3Days {
       .filter(_.length == 1)
       .map(x => x(0)).first().toInt
 
-    var result1 = sc.parallelize(List(one, one.toDouble / register1))
+    val result1 = sc.parallelize(List(one, one.toDouble / register1))
     result1.saveAsTextFile(args(4))
 
     val two = sc.textFile(args(2))
