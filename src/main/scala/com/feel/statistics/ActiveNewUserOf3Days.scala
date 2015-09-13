@@ -1,11 +1,15 @@
 package com.feel.statistics
 
-import org.apache.spark.{SparkContext, SparkConf}
+import org.apache.spark.{SparkConf, SparkContext}
 
 /**
  * Created by aidi.feng on 15/9/11.
  */
 object ActiveNewUserOf3Days {
+
+
+  val android = "[a-zA-Z0-9_]+android[_a-zA-z0-9]*"
+  val ios = "[a-zA-Z0-9_]+ios"
 
   def main (args: Array[String]) {
     val conf = new SparkConf()
@@ -14,54 +18,84 @@ object ActiveNewUserOf3Days {
     val activeUser = sc.textFile(args(0))
       .map(_.split("\t"))
       .filter(_.length == 2)
-      .map(x => (x(0), 1))
+      .map(x => (x(0), 1)) // user, 1
 
-    val one = sc.textFile(args(1))
-      .map(_.split("\t"))
-      .filter(_.length == 1)
-      .map(x => (x(0), 1))
-      .join(activeUser) //user, (1, 1)
-      .count()
-
-    val register1 = sc.textFile(args(7))
-      .map(_.split("\t"))
-      .filter(_.length == 1)
-      .map(x => x(0)).first().toInt
-
-    var result1 = sc.parallelize(List(one, one.toDouble / register1))
-    result1.saveAsTextFile(args(4))
-
-    val two = sc.textFile(args(2))
-      .map(_.split("\t"))
-      .filter(_.length == 1)
-      .map(x => (x(0), 1))
-      .join(activeUser)
-      .count()
-
-    val register2 = sc.textFile(args(8))
-      .map(_.split("\t"))
-      .filter(_.length == 1)
-      .map(x => x(0)).first().toInt
-
-    val result2 = sc.parallelize(List(two, two.toDouble / register2))
-    result2.saveAsTextFile(args(5))
-
-    val three = sc.textFile(args(3))
-      .map(_.split("\t"))
-      .filter(_.length == 1)
-      .map(x => (x(0), 1))
-      .join(activeUser)
-      .count()
-
-    val register3 = sc.textFile(args(9))
-      .map(_.split("\t"))
-      .filter(_.length == 1)
-      .map(x => x(0)).first().toInt
-
-    val result3 = sc.parallelize(List(three, three.toDouble / register3))
-    result3.saveAsTextFile(args(6))
+    for (i <- 1 to 3) {
+      val day0 = sc.textFile(args(i))
+        .map(_.replaceAll(android, "android"))
+        .map(_.replaceAll(ios, "ios"))
+        .map(_.split("\t"))
+        .filter(_.length == 3) //user, gender, platform
+        .map(x => {
+        val p  = if (x(2) != "android" && x(2) != "ios") "unknown" else x(2)
+        (x(0), x(1), p)
+      })
 
 
+      val day = day0.map(x => (x._1, 1))
+        .join(activeUser) //user, (1, 1)
+        .count()
+
+      val register = sc.textFile(args(i + 6))
+        .map(_.split("\t"))
+        .filter(_.length == 1)
+        .map(x => x(0)).first().toInt//total register
+
+      val result = sc.parallelize(List(day.toInt, day.toDouble / register))
+      result.saveAsTextFile(args(i + 3))
+
+
+      val dayPlat = day0.map(x => (x._1, x._3)) //user, platform
+        .join(activeUser) // user, (platfrom, 1)
+        .map(x => x._2) //platfrom, 1
+        .reduceByKey((a, b) => a + b) //platfrom, activenumber
+
+      val platResult = sc.textFile(args(i + 9))
+        .map(_.split("\t"))
+        .filter(_.length == 3) //platform, number, ratio
+        .map(x => (x(0), x(1)))
+        .join(dayPlat) // platform, (number, activenumber)
+        .map({case (platfrom, (number, active_number)) =>
+          platfrom + "\t" + active_number + "\t" + (active_number.toDouble / number.toDouble)})
+      platResult.saveAsTextFile(args(i + 12))
+
+
+      val dayGender = day0.map(x => (x._1, x._2)) // user, gender
+        .join(activeUser) //user, (gender, 1)
+        .map(x => x._2) //gener, 1
+        .reduceByKey((a, b) => a + b) //gender, activenumber
+
+      val genderResult = sc.textFile(args(i + 15))
+        .map(_.split("\t"))
+        .filter(_.length == 3)
+        .map(x => (x(0), x(1))) //gender, number
+        .join(dayGender) // gender, (number, activenumber)
+        .map({case (gender, (number, active_number)) =>
+          gender + "\t" + active_number + "\t" + (active_number.toDouble / number.toDouble)})
+      genderResult.saveAsTextFile(args(i + 18))
+
+      val day_G_P = day0.map(x => (x._1, (x._2, x._3))) //user, (gender, platform)
+        .join(activeUser) //user, ((gender, platform), 1)
+        .map(x => x._2)
+        .reduceByKey((a, b) => a + b)
+
+      val G_P_Result = sc.textFile(args(i + 21))
+        .map(_.split("\t"))
+        .filter(_.length == 9)
+        .map(x => (x(0), x(1))) //gender & platform, number:num
+        .map(x => {
+        val gp = x._1.split(" & ")
+        val gender = gp(0)
+        val platform = gp(1)
+        val num = x._2.split(":")(1)
+        ((gender, platform), num)
+      }).join(day_G_P) // (gender, platform), (number, activenumber)
+        .map({case ((gender, plat), (num, ac_num)) =>
+          gender + " & " + plat + "\t" + ac_num + "\t" + (ac_num.toDouble / num.toDouble)})
+      G_P_Result.saveAsTextFile(args(i + 24))
+
+
+    }
 
   }
 }

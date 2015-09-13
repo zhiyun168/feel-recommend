@@ -45,7 +45,7 @@ if __name__ == '__main__':
 
         for i in range(1, 4):
             getMySQLData.set_table('user')
-            getMySQLData.set_field('id')
+            getMySQLData.set_field('id,sex,data_from')
             getMySQLData.set_ts('reg_time')
             getMySQLData.scan_table_recent_active(i,'../data/' + str(i) + 'days_ago')
         os.system('bash ../sh/active_user_3days.sh')
