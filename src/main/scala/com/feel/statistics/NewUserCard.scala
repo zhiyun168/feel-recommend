@@ -1,7 +1,6 @@
 package com.feel.statistics
 
 import org.apache.spark.{SparkConf, SparkContext}
-import scala.collection.mutable
 
 /**
  * Created by aidi.feng on 15/9/10.
@@ -56,19 +55,19 @@ object NewUserCard {
       case _ =>
     })*/
 
-    val genderDCard = genderRDD.map(x => (x._1, x._2._1))//the card number of distinct user group by gender*/
+    val distinctUser = genderRDD.map(x => (x._1, x._2._1))//the card number of distinct user group by gender*/
       .groupByKey()
       .map(x => (x._1, x._2.toSet.size))
 
-    val genderTCard = genderRDD.map(x => (x._1, 1))
+    val genderResult = genderRDD.map(x => (x._1, 1))
       .reduceByKey((a, b) => a + b) //the card number of group by gender
-      .join(genderDCard).join(GenderNum) //gender, ((cardnumber, distinctuser), gendernum)
+      .join(distinctUser).join(GenderNum) //gender, ((cardnumber, distinctuser), gendernum)
       .map({case (gender, ((cardnum, distuser), number)) => "gender:" + gender +
       "\tnumber:" + number + "\t" + (number.toDouble / totalUser) +
       "\tpostCardNumber:" + distuser + "\t" + (distuser.toDouble / number) +
       "\tcardNumer:" + cardnum + "\taverageCard:" + (cardnum.toDouble / distuser)})
     // gender number distinct_user distinct_user/number card_number card_number/distinct_user
-    genderTCard.saveAsTextFile(args(2))
+    genderResult.saveAsTextFile(args(2))
 
 
     val RegisterPlatform = sc.textFile(args(1))
@@ -84,7 +83,7 @@ object NewUserCard {
       .reduceByKey((a, b) => a + b) //platform, number
 
     val platformCard = dataRDD.map(x => (x._3, x._1))
-      .groupByKey() //(platform, user)
+      .groupByKey() //(platform, user))
       .map(x => (x._1, x._2.toSet.size)) //platform, number
       .join(RegisterPlatform) //platform, (postcardnumber, number)
       .map(x => x._1 + "\tnumber:" + x._2._2 + "\tpostCardNumber:" + x._2._1 + "\t" + (x._2._1.toDouble / x._2._2))
@@ -96,30 +95,26 @@ object NewUserCard {
       .groupByKey()
       .join(GenderPlatNum) //(gender, platform), ({(type, status^is_del)}, num)
       .map({case((gender, plat), st) => {
-      val mp = new mutable.HashMap[String, Int]()
-      for (card <- st._1) {
-        if (card._1 == "card") {
-          if (mp.get("card").isEmpty) mp("card") = 1
-          else mp("card") += 1
-        }
-        if (card._1 == "goal") {
-          if (mp.get("goal").isEmpty) mp("goal") = 1
-          else mp("goal") += 1
 
-          if (card._2 == "0") {
-            if (mp.get("noContent").isEmpty) mp("noContent") = 1
-            else mp("noContent") += 1
-          } else if (card._2 == "2") {
-            if (mp.get("hasContent").isEmpty) mp("hasContent") = 1
-            else mp("hasContent") += 1
+      //(picture, goal, hascontent, nocontent
+      val ans = st._1.foldLeft(0, 0, 0, 0) { (res, card) =>
+        card._1 match {
+          case "card" => (res._1 + 1, res._2, res._3, res._4)
+          case "goal" => {
+            card._2 match {
+              case "0" => (res._1, res._2 + 1, res._3, res._4 + 1)
+              case "2" => (res._1, res._2 + 1, res._3 + 1, res._4)
+              case _ => res
+            }
           }
-        }
+          case _ => res
       }
+    }
       val sz = st._1.size
-      val picture = if (mp.get("card").isEmpty) 0 else mp("card")
-      val goal = if (mp.get("goal").isEmpty) 0 else mp("goal")
-      val hasC = if (mp.get("hasContent").isEmpty) 0 else mp("hasContent")
-      val noC = if (mp.get("noContent").isEmpty) 0 else mp("noContent")
+      val picture = ans._1
+      val goal = ans._2
+      val hasC  = ans._3
+      val noC = ans._4
       gender + " & " + plat+ "\tnumber:" + st._2 + "\tcardNumber:" + sz + "\tpicture:" + picture + "\t" + (picture.toDouble / sz) +
         "\tgoal:" + goal + "\t" + (goal.toDouble / sz) +
         "\thasContent:" + hasC + "\tnoContent:" + noC

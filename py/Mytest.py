@@ -41,7 +41,7 @@ if __name__ == '__main__':
 
         os.system('bash ../sh/solve_card.sh ')
 
-        os.system('python get_recently_active_user.py') 
+# os.system('python get_recently_active_user.py') 
 
         for i in range(1, 4):
             getMySQLData.set_table('user')
