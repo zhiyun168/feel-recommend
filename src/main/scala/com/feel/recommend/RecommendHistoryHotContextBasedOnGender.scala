@@ -44,8 +44,8 @@ object RecommendHistoryHotContextBasedOnGender {
 
     val result = cardLikedNumber.join(cardOwnerGender) // card, (likedNumber, (user, gender))
     .map(x => {
-      (if (x._2._2._2 == "f") "1" else "-1", (x._2._2._1, (x._2._1, x._1))) //gender, (user, likedNumber, card)
-    }).groupByKey() // biao ge shuo 1 male -1 female
+      (if (x._2._2._2 == "f") "1" else "0", (x._2._2._1, (x._2._1, x._1))) //gender, (user, likedNumber, card)
+    }).groupByKey() // biao ge shuo 1 male 0 female
     .map(x => {
       val key = x._1
       if (key == "1") {
