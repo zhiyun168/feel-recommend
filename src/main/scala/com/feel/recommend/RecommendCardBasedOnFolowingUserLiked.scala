@@ -82,15 +82,42 @@ object RecommendCardBasedOnFollowingUserLiked {
           val userLikedCardSet = userLikedCardList.toSet
           cardLikedCount.filter(_._2 <= FOLLOWING_LIKED_UPPER_BOUND)
             .filter(x => !userLikedCardSet(x._1))
-            .map(x => (x._1, user)) //recommendCard, User
+            .map(x => (x._1, user)) //recommendCard, rUser
         }
         case None => {
           cardLikedCount.filter(_._2 <= FOLLOWING_LIKED_UPPER_BOUND)
-            .map(x => (x._1, user)) //recommendCard, User
+            .map(x => (x._1, user)) //recommendCard, rUser
         }
       }
       candidateList
     })
+
+    val followingSetRDD = sc.textFile(args(1))
+      .map(_.split("\t"))
+      .filter(_.length == 2)
+      .filter(x => x(0).toInt >= REAL_USER_ID_BOUND && x(1).toInt >= REAL_USER_ID_BOUND)
+      .map(x => (x(1), x(0)))
+      .groupByKey()
+      .map(x => (x._1, x._2.toSet)) //user, followingSet
+
+    val cardOwner = sc.textFile(args(2))
+      .map(_.split("\t"))
+      .filter(_.length == 2)
+      .filter(_(0).toInt >= REAL_USER_ID_BOUND)
+      .map(x => (x(1), x(0))) //card, owner
+
+    val filteredFollowingLikedCard = followingLikedCard //recommendedCard, rUser
+      .join(cardOwner) // recommendedCard, (rUser, owner)
+      .map(x => (x._2._1, (x._1, x._2._2))) //rUser, (recommendedCard, owner)
+      .leftOuterJoin(followingSetRDD) // rUser, ((recommendedCard, owner), followingSet)
+      .filter(x => {
+      x._2._2 match {
+        case Some(userFollowingSet) => {
+          !userFollowingSet(x._2._1._2)
+        }
+        case None => true
+      }
+    }).map(x => (x._2._1._1, x._1)) //recommendedCard, rUser
 
     val cardLikedNumber = sc.textFile(args(3))
       .distinct(RDD_PARTITION_NUMBER)
@@ -100,7 +127,7 @@ object RecommendCardBasedOnFollowingUserLiked {
       .map(x => (x(1), 1))
       .reduceByKey((a, b) => a + b)
 
-    val result = followingLikedCard
+    val result = filteredFollowingLikedCard
       .join(cardLikedNumber)// recommended card, user, cardLikedNumber
       .map(x => (x._2._1, (x._1, x._2._2))) //user, recommended card, cardLikedNumber
       .groupByKey()
