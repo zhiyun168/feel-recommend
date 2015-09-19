@@ -10,8 +10,9 @@ import org.apache.spark.{SparkContext, SparkConf}
 object RecommendCardBasedOnGoalJoined {
 
   private val REAL_USER_ID_BOUND = 1075
-  private val GOAL_USER_NUMBER_THRESHOLD = 2000
-  private var CARD_LIKED_THRESHOLD = 3
+  private val GOAL_USER_NUMBER_THRESHOLD = 1000
+  private val CARD_LIKED_BOTTOM_BOUND = 3
+  private val CARD_LIKED_UP_BOUND = 30
   private val CANDIDATES_SIZE = 100
 
   def knuthShuffle[T](x: Array[T]) = {
@@ -38,7 +39,7 @@ object RecommendCardBasedOnGoalJoined {
       val goalUserNumber = x._2.size
       val goalUsers = x._2.toArray
       if (x._2.size >= GOAL_USER_NUMBER_THRESHOLD) {
-        val itNumber = min(goalUserNumber / GOAL_USER_NUMBER_THRESHOLD, 20)
+        val itNumber = min(goalUserNumber / GOAL_USER_NUMBER_THRESHOLD, 10)
         val result = new Array[(String, String)](itNumber * GOAL_USER_NUMBER_THRESHOLD * GOAL_USER_NUMBER_THRESHOLD)
         for(it <- 0 until itNumber) {
           val sampledUsers = knuthShuffle(goalUsers).take(GOAL_USER_NUMBER_THRESHOLD)
@@ -68,50 +69,50 @@ object RecommendCardBasedOnGoalJoined {
       .filter(x => x.length == 2 && x(0).toInt >= REAL_USER_ID_BOUND)
       .map(x => (x(0), x(1)))
 
-    CARD_LIKED_THRESHOLD = args(5).toInt
-
     val cardLikedNumber = sc.textFile(args(2))
       .map(_.split("\t")) //user, card
       .filter(x => x.length == 2)
       .map(x => (x(1), 1))
       .reduceByKey((a, b) => a + b)
-      .filter(_._2 >= CARD_LIKED_THRESHOLD)
+      .filter(x => x._2 >= CARD_LIKED_BOTTOM_BOUND && x._2 <= CARD_LIKED_UP_BOUND)
 
     val userCard = sc.textFile(args(3)) // user, card, type
       .map(_.split("\t"))
       .filter(x => x.length == 3 && x(0).toInt >= REAL_USER_ID_BOUND && x(2) == "card")
       .map(x => (x(1), x(0))) // card, user
       .join(cardLikedNumber) // filter
-      .map(x => (x._2._1, x._1)) //user, card
+      .map(x => (x._2._1, (x._1, x._2._2))) //user, (card, likedNumber)
 
-    val userFollowingSet = sc.textFile(args(4))
+    /*val userFollowingSet = sc.textFile(args(4))
       .map(_.split("\t"))
       .filter(x => x.length == 2 && x(0).toInt >= REAL_USER_ID_BOUND && x(1).toInt >= REAL_USER_ID_BOUND)
       .map(x => (x(1), x(0)))
       .groupByKey()
-      .map(x => (x._1, x._2.toSet))
+      .map(x => (x._1, x._2.toSet))*/
 
     val result = goalUserRecommend.join(userGender)
     .map(x => {
       (x._2._1, (x._1, x._2._2)) //recommended, (user, gender)
     }).join(userGender) // recommended, ((user, gender), recommendedGender)
-      .filter(x => x._2._1._2 != x._2._2)
+      //.filter(x => x._2._1._2 != x._2._2)
       .map(x => (x._1, x._2._1._1)) //user, recommended
-      .leftOuterJoin(userFollowingSet) //user, (recommended, followingSet)
-      .filter(x => {
+      //.leftOuterJoin(userFollowingSet) //user, (recommended, followingSet)
+      /*.filter(x => {
         x._2._2 match {
           case Some(followingSet) => !followingSet(x._1)
           case None => true
         }
-    }).map(x => (x._2._1, x._1)) //recommended, user
-      .join(userCard) // recommended, (user, Card)
+    })
+      .map(x => (x._2._1, x._1)) //recommended, user*/
+      .map(x => (x._2, x._1)) //recommended, user
+      .join(userCard) // recommended, (user, (card, likedNumber))
       .map(_._2)
       .groupByKey()
       .map(x => {
       val user = x._1
-      val cardCandidates = x._2.take(CANDIDATES_SIZE)
+      val cardCandidates = x._2.toSeq.sortWith(_._2 > _._2).map(_._1).take(CANDIDATES_SIZE)
       (user, cardCandidates)
     })
-    result.saveAsTextFile(args(6))
+    result.saveAsTextFile(args(4))
   }
 }
