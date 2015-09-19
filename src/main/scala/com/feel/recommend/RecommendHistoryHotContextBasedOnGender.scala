@@ -44,11 +44,11 @@ object RecommendHistoryHotContextBasedOnGender {
 
     val result = cardLikedNumber.join(cardOwnerGender) // card, (likedNumber, (user, gender))
     .map(x => {
-      (if (x._2._2._2 == "f") "1" else "0", (x._2._2._1, (x._2._1, x._1))) //gender, (user, likedNumber, card)
+      (if (x._2._2._2 == "f") "0" else "1", (x._2._2._1, (x._2._1, x._1))) //gender, (user, likedNumber, card)
     }).groupByKey() // biao ge shuo 1 male 0 female
     .map(x => {
       val key = x._1
-      if (key == "1") {
+      if (key == "0") {
         val candidates = x._2.foldLeft(new mutable.HashMap[String, (Int, String)]())((userCardCmp, tuple) => {
           val previousValue = userCardCmp.getOrElse(tuple._1, (0, ""))
           if (previousValue._1 < tuple._2._1)
