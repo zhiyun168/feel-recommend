@@ -83,12 +83,12 @@ object RecommendCardBasedOnGoalJoined {
       .join(cardLikedNumber) // filter
       .map(x => (x._2._1, (x._1, x._2._2))) //user, (card, likedNumber)
 
-    /*val userFollowingSet = sc.textFile(args(4))
+    val userFollowingSet = sc.textFile(args(4))
       .map(_.split("\t"))
       .filter(x => x.length == 2 && x(0).toInt >= REAL_USER_ID_BOUND && x(1).toInt >= REAL_USER_ID_BOUND)
       .map(x => (x(1), x(0)))
       .groupByKey()
-      .map(x => (x._1, x._2.toSet))*/
+      .map(x => (x._1, x._2.toSet))
 
     val result = goalUserRecommend.join(userGender)
     .map(x => {
@@ -106,13 +106,18 @@ object RecommendCardBasedOnGoalJoined {
       .map(x => (x._2._1, x._1)) //recommended, user*/
       .map(x => (x._2, x._1)) //recommended, user
       .join(userCard) // recommended, (user, (card, likedNumber))
-      .map(_._2)
+      .map(x => (x._2._1, (x._1, x._2._2._1, x._2._2._2))) //(user, recommendedCardInfo) recommendedUser, card,
+      // likedNumber
       .groupByKey()
+      .join(userFollowingSet) // user, (cardInfo, followingSet)
       .map(x => {
       val user = x._1
-      val cardCandidates = x._2.toSeq.sortWith(_._2 > _._2).map(_._1).take(CANDIDATES_SIZE)
+      val followingSet = x._2._2
+      val cardCandidates = x._2._1.toSeq.filter(cardInfo => !followingSet(cardInfo._1)).sortWith(_._3 > _._3).map(_._2)
+        .distinct
+        .take(CANDIDATES_SIZE)
       (user, cardCandidates)
     })
-    result.saveAsTextFile(args(4))
+    result.saveAsTextFile(args(5))
   }
 }
