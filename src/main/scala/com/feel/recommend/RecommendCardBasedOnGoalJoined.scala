@@ -3,10 +3,14 @@ package com.feel.recommend
 import breeze.linalg.min
 import scala.util.Random.nextInt
 import org.apache.spark.{SparkContext, SparkConf}
+import org.elasticsearch.spark._
 
 /**
  * Created by canoe on 9/17/15.
  */
+
+case class JoinedGoalCardCandidates(card: String, candidates: Seq[String])
+
 object RecommendCardBasedOnGoalJoined {
 
   private val REAL_USER_ID_BOUND = 1075
@@ -29,7 +33,10 @@ object RecommendCardBasedOnGoalJoined {
     val conf = new SparkConf()
     val sc = new SparkContext(conf)
 
-    val userGoal = sc.textFile(args(0)) // user, goal
+    conf.set("es.mapping.id", "card")
+    conf.set("es.nodes", args(0))
+
+    val userGoal = sc.textFile(args(1)) // user, goal
       .map(_.split("\t"))
       .filter(x => x.length == 2 && x(0).toInt >= REAL_USER_ID_BOUND)
 
@@ -64,26 +71,26 @@ object RecommendCardBasedOnGoalJoined {
       }
     })
 
-    val userGender = sc.textFile(args(1)) // user, gender
+    val userGender = sc.textFile(args(2)) // user, gender
       .map(_.split("\t"))
       .filter(x => x.length == 2 && x(0).toInt >= REAL_USER_ID_BOUND)
       .map(x => (x(0), x(1)))
 
-    val cardLikedNumber = sc.textFile(args(2))
+    val cardLikedNumber = sc.textFile(args(3))
       .map(_.split("\t")) //user, card
       .filter(x => x.length == 2)
       .map(x => (x(1), 1))
       .reduceByKey((a, b) => a + b)
       .filter(x => x._2 >= CARD_LIKED_BOTTOM_BOUND && x._2 <= CARD_LIKED_UP_BOUND)
 
-    val userCard = sc.textFile(args(3)) // user, card, type
+    val userCard = sc.textFile(args(4)) // user, card, type
       .map(_.split("\t"))
       .filter(x => x.length == 3 && x(0).toInt >= REAL_USER_ID_BOUND && x(2) == "card")
       .map(x => (x(1), x(0))) // card, user
       .join(cardLikedNumber) // filter
       .map(x => (x._2._1, (x._1, x._2._2))) //user, (card, likedNumber)
 
-    val userFollowingSet = sc.textFile(args(4))
+    val userFollowingSet = sc.textFile(args(5))
       .map(_.split("\t"))
       .filter(x => x.length == 2 && x(0).toInt >= REAL_USER_ID_BOUND && x(1).toInt >= REAL_USER_ID_BOUND)
       .map(x => (x(1), x(0)))
@@ -96,20 +103,12 @@ object RecommendCardBasedOnGoalJoined {
     }).join(userGender) // recommended, ((user, gender), recommendedGender)
       //.filter(x => x._2._1._2 != x._2._2)
       .map(x => (x._1, x._2._1._1)) //user, recommended
-      //.leftOuterJoin(userFollowingSet) //user, (recommended, followingSet)
-      /*.filter(x => {
-        x._2._2 match {
-          case Some(followingSet) => !followingSet(x._1)
-          case None => true
-        }
-    })
-      .map(x => (x._2._1, x._1)) //recommended, user*/
       .map(x => (x._2, x._1)) //recommended, user
       .join(userCard) // recommended, (user, (card, likedNumber))
       .map(x => (x._2._1, (x._1, x._2._2._1, x._2._2._2))) //(user, recommendedCardInfo) recommendedUser, card,
       // likedNumber
       .groupByKey()
-      .join(userFollowingSet) // user, (cardInfo, followingSet)
+      .join(userFollowingSet) // user, ({cardInfo}, followingSet)
       .map(x => {
       val user = x._1
       val followingSet = x._2._2
@@ -118,6 +117,7 @@ object RecommendCardBasedOnGoalJoined {
         .take(CANDIDATES_SIZE)
       (user, cardCandidates)
     })
-    result.saveAsTextFile(args(5))
+    result.saveAsTextFile(args(6))
+    result.map(x => JoinedGoalCardCandidates(x._1, x._2)).saveToEs(args(7))
   }
 }
