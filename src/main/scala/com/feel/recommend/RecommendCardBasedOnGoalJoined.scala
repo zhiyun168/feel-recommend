@@ -31,10 +31,12 @@ object RecommendCardBasedOnGoalJoined {
 
   def main(args: Array[String]) = {
     val conf = new SparkConf()
-    val sc = new SparkContext(conf)
 
     conf.set("es.mapping.id", "card")
     conf.set("es.nodes", args(0))
+
+    val sc = new SparkContext(conf)
+
 
     val userGoal = sc.textFile(args(1)) // user, goal
       .map(_.split("\t"))
