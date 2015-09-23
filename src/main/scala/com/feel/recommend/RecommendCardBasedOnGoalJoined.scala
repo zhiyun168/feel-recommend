@@ -9,7 +9,7 @@ import org.elasticsearch.spark._
  * Created by canoe on 9/17/15.
  */
 
-case class JoinedGoalCardCandidates(card: String, candidates: Seq[String])
+case class JoinedGoalCardCandidates(user: String, candidates: Seq[String])
 
 object RecommendCardBasedOnGoalJoined {
 
@@ -32,7 +32,7 @@ object RecommendCardBasedOnGoalJoined {
   def main(args: Array[String]) = {
     val conf = new SparkConf()
 
-    conf.set("es.mapping.id", "card")
+    conf.set("es.mapping.id", "user")
     conf.set("es.nodes", args(0))
 
     val sc = new SparkContext(conf)
