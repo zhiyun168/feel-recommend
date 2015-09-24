@@ -13,11 +13,14 @@ import scala.collection.mutable
 object UserInfoData {
 
   private val REAL_USER_ID_BOUND = 1075
-  private val PREFIX = "../data/"
+  private var PREFIX = "../data/"
 
   def main(args: Array[String]) = {
     val conf = new SparkConf()
     val sc = new SparkContext(conf)
+
+
+    PREFIX = args(6)
 
     def getUserAttribution(arg: String) = {
       sc.textFile(arg)
@@ -56,12 +59,12 @@ object UserInfoData {
           val today = new SimpleDateFormat("yyyy-MM-dd").format(new Date())
           val yearDiff = today.substring(0, 4).toInt - birthdayYear.toInt
           val delta = {
-            if (today.substring(5, 10) > birthdayMonth + birthdayDay) 1
-            else -1
+            if (today.substring(5, 10) > birthdayMonth + "-" + birthdayDay) 1
+            else 0
           }
           yearDiff + delta
         }
-        case _: String => 22
+        case _: String => -1
       }
       (user, "age:" + age.toString)
     }).saveAsTextFile(PREFIX + "user_attribution_age")
