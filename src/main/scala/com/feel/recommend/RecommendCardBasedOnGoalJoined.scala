@@ -1,6 +1,7 @@
 package com.feel.recommend
 
 import breeze.linalg.min
+import scala.collection.mutable
 import scala.util.Random.nextInt
 import org.apache.spark.{SparkContext, SparkConf}
 import org.elasticsearch.spark._
@@ -104,12 +105,19 @@ object RecommendCardBasedOnGoalJoined {
       (x._2._1, (x._1, x._2._2)) //recommended, (user, gender)
     }).join(userGender) // recommended, ((user, gender), recommendedGender)
       //.filter(x => x._2._1._2 != x._2._2)
-      .map(x => (x._1, x._2._1._1)) //user, recommended
-      .map(x => (x._2, x._1)) //recommended, user
+      .map(x => (x._1, x._2._1._1)) //recommended, user
       .join(userCard) // recommended, (user, (card, likedNumber))
       .map(x => (x._2._1, (x._1, x._2._2._1, x._2._2._2))) //(user, recommendedCardInfo) recommendedUser, card,
       // likedNumber
       .groupByKey()
+      .map(x => {
+      val cardCandidates = x._2.foldLeft(new mutable.HashMap[String, (String, Int)]())((userCardInfo, value) => {
+        if (value._3 > userCardInfo.getOrElse(value._1, ("", -1))._2)
+          userCardInfo(value._1) = (value._2, value._3)
+        userCardInfo
+      }).toArray.map(y => (y._1, y._2._1, y._2._2))
+      (x._1, cardCandidates)
+    })
       .join(userFollowingSet) // user, ({cardInfo}, followingSet)
       .map(x => {
       val user = x._1
