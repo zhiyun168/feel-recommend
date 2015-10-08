@@ -17,11 +17,14 @@ object FeelValueStatistics {
 
     def groupData(index: Int, rdd: RDD[Array[String]]) = {
       rdd.map(x => (x(index).toInt, 1))
-         .reduceByKey((a, b) => a + b)
+        .reduceByKey((a, b) => a + b)
     }
 
     for (i <- 1 until 6) {
-      groupData(i, dataRDD).saveAsTextFile(args(i))
+      val data = groupData(i, dataRDD)
+      data.saveAsTextFile(args(i) + "Statistics")
+      val sum = data.collect().foldLeft(0)((acc, x) => acc + x._1 * x._2)
+      sc.parallelize(List(sum)).saveAsTextFile(args(i) + "Sum")
     }
   }
 }
