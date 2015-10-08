@@ -13,9 +13,14 @@ class GetMySQLData(object):
         self.table = ''
         self.field = ''
         self.ts_field = ''
+        self.ts_create = ''
         self.ts = ''
         self.output_file = ''
-        self.t = int(time.time())
+        lastDay = (datetime.datetime.now() - datetime.timedelta(days = 1))
+        a = lastDay.strftime("%Y%m%d")
+        timeArray = time.strptime(a, "%Y%m%d")
+        self.t = int(time.mktime(timeArray))
+        self.tt = self.t
         self.currentTime = str(self.t)
         self.lastDay = str(self.t - 86400)
 
@@ -31,8 +36,16 @@ class GetMySQLData(object):
     def set_ts_field(self, ts_field):
         self.ts_field = ts_field
 
+    def set_ts_create(self, ts_create):
+		self.ts_create = ts_create
+
     def set_output_file(self, output_file):
         self.output_file = output_file
+
+    def set_date(self, day):
+        self.tt = self.t - day * 86400
+        self.currentTime = str(self.tt)
+        self.lastDay = str(self.tt - 86400)
 
     def scan_table(self):
         try:
@@ -57,7 +70,7 @@ class GetMySQLData(object):
         try:
             db = MySQLdb.connect(host='172.31.10.151', user='vreader', db='veryplus', passwd='veryplus100200', charset='utf8')
             cur = db.cursor()
-            sql_command = 'select ' + self.field + ' from ' + self.table + ' where ' + self.ts_field + ' && ' + self.ts + ' >= ' + self.lastDay  + ' && ' + self.ts + ' < ' + self.currentTime
+            sql_command = 'select ' + self.field + ' from ' + self.table + ' where ' + self.ts_field + ' && ' + self.ts + ' >= ' + self.lastDay  + ' && ' + self.ts + ' < ' + self.currentTime + ' && ' + self.ts_create + ' >= ' + self.lastDay  + ' && ' + self.ts_create + ' < ' + self.currentTime
             print sql_command
             cur.execute(sql_command)
             output_file = self.output_file
@@ -73,8 +86,8 @@ class GetMySQLData(object):
 			return False
 
     def scan_table_recent_active(self, daysago, output_file):
-        st = str(self.t - (daysago + 1) * 86400)
-        ed = str(self.t - daysago * 86400)
+        st = str(self.tt - (daysago + 1) * 86400)
+        ed = str(self.tt - daysago * 86400)
         try:
 			db = MySQLdb.connect(host='172.31.10.151', user='vreader', db='veryplus', passwd='veryplus100200', charset='utf8')
 			cur = db.cursor()

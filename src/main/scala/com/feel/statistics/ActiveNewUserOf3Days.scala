@@ -22,12 +22,13 @@ object ActiveNewUserOf3Days {
 
     for (i <- 1 to 3) {
       val day0 = sc.textFile(args(i))
+        .map(_.replaceAll("x", "f"))
         .map(_.replaceAll(android, "android"))
         .map(_.replaceAll(ios, "ios"))
         .map(_.split("\t"))
         .filter(_.length == 3) //user, gender, platform
         .map(x => {
-        val p  = if (x(2) != "android" && x(2) != "ios") "unknown" else x(2)
+        val p  = if (x(2) != "android" && x(2) != "ios") "ios" else x(2)
         (x(0), x(1), p)
       })
 
@@ -41,7 +42,7 @@ object ActiveNewUserOf3Days {
         .filter(_.length == 1)
         .map(x => x(0)).first().toInt//total register
 
-      val result = sc.parallelize(List(day.toInt, day.toDouble / register))
+      val result = sc.parallelize(List(day.toInt + "\t" + "%.2f".format(day.toDouble / register * 100) + "%"))
       result.saveAsTextFile(args(i + 3))
 
 
@@ -56,7 +57,7 @@ object ActiveNewUserOf3Days {
         .map(x => (x(0), x(1)))
         .join(dayPlat) // platform, (number, activenumber)
         .map({case (platfrom, (number, active_number)) =>
-          platfrom + "\t" + active_number + "\t" + (active_number.toDouble / number.toDouble)})
+          platfrom + "\t" + active_number + "\t" + "%.2f".format(active_number.toDouble / number.toDouble * 100) + "%"})
       platResult.saveAsTextFile(args(i + 12))
 
 
@@ -71,7 +72,7 @@ object ActiveNewUserOf3Days {
         .map(x => (x(0), x(1))) //gender, number
         .join(dayGender) // gender, (number, activenumber)
         .map({case (gender, (number, active_number)) =>
-          gender + "\t" + active_number + "\t" + (active_number.toDouble / number.toDouble)})
+          gender + "\t" + active_number + "\t" + "%.2f".format(active_number.toDouble / number.toDouble * 100) + "%"})
       genderResult.saveAsTextFile(args(i + 18))
 
       val day_G_P = day0.map(x => (x._1, (x._2, x._3))) //user, (gender, platform)
@@ -91,11 +92,11 @@ object ActiveNewUserOf3Days {
         ((gender, platform), num)
       }).join(day_G_P) // (gender, platform), (number, activenumber)
         .map({case ((gender, plat), (num, ac_num)) =>
-          gender + " & " + plat + "\t" + ac_num + "\t" + (ac_num.toDouble / num.toDouble)})
+          gender + " & " + plat + "\t" + ac_num + "\t" + "%.2f".format(ac_num.toDouble / num.toDouble * 100) + "%"})
       G_P_Result.saveAsTextFile(args(i + 24))
 
-
     }
+
 
   }
 }

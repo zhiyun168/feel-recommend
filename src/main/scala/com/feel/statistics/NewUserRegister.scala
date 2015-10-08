@@ -19,6 +19,7 @@ object NewUserRegister {
     val Date = DateFormat.format(lastDayTime)
 
     val RegisterGender = sc.textFile(args(0))
+      .map(_.replaceAll("x", "f"))
       .map(_.split("\t"))
       .filter(_.length == 2)
       .map(x => (x(1), 1)) //gender
@@ -30,7 +31,7 @@ object NewUserRegister {
 
 
     val GenderResult = RegisterGender.reduceByKey((a, b) => a + b)
-      .map(x => x._1 + "\t" + x._2 + "\t" + (x._2.toDouble / newUser) )
+      .map(x => x._1 + "\t" + x._2 + "\t" + "%.2f".format(x._2.toDouble / newUser * 100) + "%" )
     GenderResult.saveAsTextFile(args(2))
 
     val android = "[a-zA-Z0-9_]+android[_a-zA-z0-9]*"
@@ -43,11 +44,11 @@ object NewUserRegister {
       .filter(_.length == 2)
       .map(x => (x(0), 1)) //platform
       .map(x => {
-        val p  = if (x._1 != "android" && x._1 != "ios") "unknown" else x._1
+        val p  = if (x._1 != "android" && x._1 != "ios") "ios" else x._1
         (p, x._2)
       })
       .reduceByKey((a, b) => a + b)
-      .map(x => x._1 + "\t" + x._2 + "\t" + (x._2.toDouble / newUser))
+      .map(x => x._1 + "\t" + x._2 + "\t" + "%.2f".format(x._2.toDouble / newUser * 100) + "%")
     RegisterPlatform.saveAsTextFile(args(3))
 
   }

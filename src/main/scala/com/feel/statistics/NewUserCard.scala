@@ -16,16 +16,18 @@ object NewUserCard {
     val dataRDD = sc.textFile(args(0))
       .map(_.replaceAll(android, "android"))
       .map(_.replaceAll(ios, "ios"))
+      .map(_.replaceAll("x", "f"))
       .map(_.split("\t"))
       .filter(_.length == 5)
       .map(x => (x(0), x(1), x(2), x(3), x(4))) //user, gender, platform, type, status^is_del
       .map(x => {
-      val p = if (x._3 != "android" && x._3 != "ios") "unknown" else x._3
+      val p = if (x._3 != "android" && x._3 != "ios") "ios" else x._3
       (x._1, x._2, p, x._4, x._5)
     })
 
 
     val userRDD = sc.textFile(args(1))
+      .map(_.replaceAll("x", "f"))
       .map(_.split("\t"))
       .filter(_.length == 2)
       .map(x => (x(1), 1)) //gender
@@ -35,11 +37,12 @@ object NewUserCard {
     val GenderPlatNum = sc.textFile(args(1))
       .map(_.replaceAll(android, "android"))
       .map(_.replaceAll(ios, "ios"))
+      .map(_.replaceAll("x", "f"))
       .map(_.split("\t"))
       .filter(_.length == 2)
       .map(x => (x(1), x(0))) //gender, platform
       .map(x => {
-      val p  = if (x._2 != "android" && x._2 != "ios") "unknown" else x._2
+      val p  = if (x._2 != "android" && x._2 != "ios") "ios" else x._2
       ((x._1, p), 1)
     })
       .reduceByKey((a, b) => a + b) //platform, number
@@ -62,10 +65,10 @@ object NewUserCard {
     val genderResult = genderRDD.map(x => (x._1, 1))
       .reduceByKey((a, b) => a + b) //the card number of group by gender
       .join(distinctUser).join(GenderNum) //gender, ((cardnumber, distinctuser), gendernum)
-      .map({case (gender, ((cardnum, distuser), number)) => "gender:" + gender +
-      "\tnumber:" + number + "\t" + (number.toDouble / totalUser) +
-      "\tpostCardNumber:" + distuser + "\t" + (distuser.toDouble / number) +
-      "\tcardNumer:" + cardnum + "\taverageCard:" + (cardnum.toDouble / distuser)})
+      .map({case (gender, ((cardnum, distuser), number)) => "性别:" + gender +
+      "\t注册数:" + number + "\t占比:" + "%.2f".format(number.toDouble / totalUser * 100) + "%" +
+      "\t发动态人数:" + distuser + "\t占比:" + "%.2f".format(distuser.toDouble / number * 100) + "%" +
+      "\t动态数:" + cardnum + "\t人均动态数:" + "%.2f".format(cardnum.toDouble / distuser)})
     // gender number distinct_user distinct_user/number card_number card_number/distinct_user
     genderResult.saveAsTextFile(args(2))
 
@@ -77,7 +80,7 @@ object NewUserCard {
       .filter(_.length == 2)
       .map(x => (x(0), 1)) //platform
       .map(x => {
-        val p  = if (x._1 != "android" && x._1 != "ios") "unknown" else x._1
+        val p  = if (x._1 != "android" && x._1 != "ios") "ios" else x._1
         (p, x._2)
     })
       .reduceByKey((a, b) => a + b) //platform, number
@@ -86,7 +89,7 @@ object NewUserCard {
       .groupByKey() //(platform, user))
       .map(x => (x._1, x._2.toSet.size)) //platform, number
       .join(RegisterPlatform) //platform, (postcardnumber, number)
-      .map(x => x._1 + "\tnumber:" + x._2._2 + "\tpostCardNumber:" + x._2._1 + "\t" + (x._2._1.toDouble / x._2._2))
+      .map(x => x._1 + "\t注册数:" + x._2._2 + "\t发动态人数:" + x._2._1 + "\t占比:" + "%.2f".format(x._2._1.toDouble / x._2._2 * 100) + "%")
 
     platformCard.saveAsTextFile(args(3))
 
@@ -115,12 +118,18 @@ object NewUserCard {
       val goal = ans._2
       val hasC  = ans._3
       val noC = ans._4
-      gender + " & " + plat+ "\tnumber:" + st._2 + "\tcardNumber:" + sz + "\tpicture:" + picture + "\t" + (picture.toDouble / sz) +
-        "\tgoal:" + goal + "\t" + (goal.toDouble / sz) +
-        "\thasContent:" + hasC + "\tnoContent:" + noC
+      gender + " & " + plat+ "\t注册数:" + st._2 + "\t动态数:" + sz +
+        "\t图片:" + picture + "\t占比:" + "%.2f".format(picture.toDouble / sz * 100) + "%" +
+        "\t打卡:" + goal + "\t占比:" + "%.2f".format(goal.toDouble / sz * 100) + "%" +
+        "\t有内容打卡:" + hasC + "\t无内容打卡:" + noC
     }})
 
     postCard.saveAsTextFile(args(4))
+
+    val picture = dataRDD.filter(_._4 == "card").count()
+    val res = sc.parallelize(List("发动态人数:" + CardUser + "\t占比:" + "%.2f".format(CardUser.toDouble / totalUser * 100) + "%",
+    "图片内容:" + picture + "\t占比:" + "%.2f".format(picture.toDouble / totalCard * 100) + "%"))
+    res.saveAsTextFile(args(5))
 
   }
 }
