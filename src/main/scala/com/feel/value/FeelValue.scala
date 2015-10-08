@@ -39,8 +39,12 @@ object FeelValue {
     val sc = new SparkContext(conf)
     val sql = new SQLContext(sc)
 
-    val yesterdayFeelScoreRDD = sql.read.format("org.elasticsearch.spark.sql").load(args(1))
-    .map(x => (x(0).toString + "\t-1:" + x(1).toString))
+    //val yesterdayFeelScoreRDD = sql.read.format("org.elasticsearch.spark.sql").load(args(1))
+    //.map(x => (x(0).toString + "\t-1:" + x(1).toString))
+    val yesterdayFeelScoreRDD = sc.textFile(args(1))
+      .map(_.split("\t"))
+      .filter(_.length == 2)
+      .map(x => x(0) + "\t-1:" + x(1))
 
     val fakedLikeRDD = sc.textFile(args(11))
     .map(x => (x, 0))
@@ -129,8 +133,8 @@ object FeelValue {
     val userSportsScore = mongoRDD.map(x => {
       val user = x._2.get("uid")
       val goalType = x._2.get("goal_type").toString
-      val ts = x._2.get("record_time").toString.toDouble
-      val sportsScore = if (ts < args(8).toDouble) {
+      val ts = x._2.get("record_time").toString.toLong / 1000
+      val sportsScore = if (ts < args(8).toLong) {
         0
       } else {
         val deviceScore = try {
@@ -184,6 +188,7 @@ object FeelValue {
         socialScore + sportsScore + previousScore)
     })
     userFeelDetailScore.saveAsTextFile(args(9))
-    userFeelDetailScore.map(x => FeelValue(x._1, x._6.toString)).saveToEs(args(1))
+    userFeelDetailScore.map(x => FeelValue(x._1, x._6.toString)).saveToEs(args(13))
+    userFeelDetailScore.map(x => (x._1 + "\t" + x._6.toString)).saveAsTextFile(args(10))
   }
 }
