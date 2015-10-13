@@ -19,6 +19,7 @@ object RecommendSimilarTag {
   private val CON_EXIST_TAG = 20
   private val INF = (1 << 30)
   private val TAG_FILTER = 20
+  private val CANDIDATES_SIZE = 3
 
   def jaccardSimilarity(A: String, B: String) = {
     val aSet = A.toSet
@@ -123,11 +124,11 @@ object RecommendSimilarTag {
           hashAverage(tuple._1) = (preValue._1 + tuple._2, preValue._2 + 1D)
         }
         hashAverage
-      }).toSeq.map(x => (x._1, x._2._1 / x._2._2)).sortWith(_._2 > _._2).take(2).map(_._1._1)
+      }).toSeq.map(x => (x._1, x._2._1 / x._2._2)).sortWith(_._2 > _._2).take(CANDIDATES_SIZE).map(_._1._1)
       TagCandidate(key, value)
     })
     result.saveToEs("recommendation/similarTag")
-    result.saveAsTextFile(args(5))
+    result.map(x => (x.tag + "\t" + x.candidates.mkString(","))).saveAsTextFile(args(5))
 
   }
 }
