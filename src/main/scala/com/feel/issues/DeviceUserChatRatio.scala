@@ -80,5 +80,50 @@ object DeviceUserChatRatio {
       screenSize + "\t" + modelList
     })
     resolutionModel.saveAsTextFile(args(5))
+
+    val userModelInfo = deviceRDD.map(x => {
+      val user = x._2.get("uid").toString
+      val model = x._2.get("phoneModel").toString.replaceAll("[\t ]", "")
+      (user, model)
+    }).distinct()
+
+    val modelUserChatRatio = userModelInfo.leftOuterJoin(userChatInfo)
+      .map(x => {
+      val chatCount = x._2._2 match {
+        case Some(number) => 1
+        case None => 0
+      }
+      ((x._2._1, chatCount), 1)
+    }).reduceByKey((a, b) => a + b)
+      .map(x => {
+      val key = x._1._1
+      val value = (x._1._2, x._2)
+      (key, value)
+    }).groupByKey()
+      .map(x => {
+      val deviceAllUser = x._2.map(_._2).sum
+      val chatNumber = {
+        val chatList = x._2.filter(_._1 == 1)
+        if (chatList.size == 0) 0 else chatList.map(_._2).head
+      }
+      if (deviceAllUser >= 100)
+        (x._1, x._2, chatNumber.toDouble / deviceAllUser)
+      else
+        (x._1, x._2, -1.0)
+    }).filter(_._3 > 0)
+    .map(x => (x._1, x._3))
+
+    val modelUserNumber = deviceRDD.map(x => {
+      val user = x._2.get("uid").toString
+      val model = x._2.get("phoneModel").toString.replaceAll("[\t ]", "")
+      (model, user)
+    }).distinct()
+    .groupByKey().map(x => (x._1, x._2.size))
+    .filter(_._2 > 100)
+
+    val modelUserGreaterThan100ChatRatio = modelUserChatRatio.join(modelUserNumber)
+    .map(x => x._1 + "\t" + x._2._1 + "\t" + x._2._2)
+
+    modelUserGreaterThan100ChatRatio.saveAsTextFile(args(6))
   }
 }
