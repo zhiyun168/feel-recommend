@@ -52,16 +52,18 @@ object RecommendCardForSimilarTag {
     val result = cardTag.join(cardLikedNumber)
       .map(x => (x._2._1, (x._1, x._2._2))) //tag, card, cardNumber
       .join(similarTag) // similarTag, rawTag
-      .map(x => (x._2._2, x._2._1))// rawTag, (card, cardNumber)
+      .map(x => (x._2._2, (x._2._1._1, x._2._1._2, x._1)))// rawTag, (card, cardNumber, similarTag)
       .groupByKey()
       .map(x => {
       val tag = x._1
-      val candidates = x._2.toArray.sortWith(_._2 > _._2).map(_._1).distinct.take(CANDIDATES_SIZE)
+      val candidates = x._2.toSeq.sortWith(_._2 > _._2).map(y => y._1 + ":" + y._3)
+        .distinct
+        .take(CANDIDATES_SIZE)
       (tag, candidates)
     })
 
     result.map(x => (x._1, x._2.mkString(","))).saveAsTextFile(args(5))
-    result.map(x => TagCandidates(x._1, x._2)).saveToEs("recommendation/similar_tag_card")
+    result.map(x => TagCandidates(x._1, x._2)).saveToEs("recommendation/similar_tag_card_with_detail")
   }
 
 }
