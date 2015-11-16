@@ -63,7 +63,7 @@ object RecommendGoalBasedOnGender {
       .map(x => {
       val user = x._2._1
       val goalCandidates = x._2._2.map(y => (y, nextInt())).sortWith(_._2 > _._2).map(_._1)
-      (user, goalCandidates)
+      (user, (goalCandidates, x._1))
     })
       .leftOuterJoin(userGoalList)
     .map(x => {
@@ -71,15 +71,15 @@ object RecommendGoalBasedOnGender {
       x._2._2 match {
         case Some(joinedGoalList) => {
           val joinedGoalSet = joinedGoalList.split("\t").toSet
-          val goalCandidates = x._2._1.filter(!joinedGoalSet(_))
+          val goalCandidates = x._2._1._1.filter(!joinedGoalSet(_)).map(_ + ":" + x._2._1._2)
           GenderGoalRecommend(user, goalCandidates)
         }
         case None => {
-          GenderGoalRecommend(user, x._2._1)
+          GenderGoalRecommend(user, x._2._1._1.map(_ + ":" + x._2._1._2))
         }
       }
     })
-    result.saveToEs("recommendation/genderGoal")
+    result.saveToEs("recommendation/gender_goal_with_detail")
     result.saveAsTextFile(args(3))
   }
 }
