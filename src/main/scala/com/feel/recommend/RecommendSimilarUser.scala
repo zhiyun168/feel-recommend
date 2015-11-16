@@ -14,7 +14,7 @@ object RecommendSimilarUser {
   private var CANDIDATES_SIZE = 200
   private val RDD_PARTITION_SIZE = 100
   private var COMMON_FOLLOWER_NUMBER = 5
-  private val SAMPLE_THRESHOLD = 2000
+  private val SAMPLE_THRESHOLD = 5000
   private var FOLLOWER_THRESHOLD = 500
 
   def knuthShuffle[T](x: Array[T]) = {
@@ -61,8 +61,8 @@ object RecommendSimilarUser {
       .map(x => (x._1, x._2._1)) // rleader, follower
       .join(followerNumber)
       .map(x => (x._2._1, x._1)) // follower, rleader
-      .reduceByKey((a, b) => a + "\t" + b) //action
-      .map(x => x._2.split("\t"))
+      .groupByKey() //action
+      .map(x => x._2.toArray)
       .filter(x => (x.length >= USER_NUMBER_BOTTOM_BOUND))
       .map(x => {
       if (x.length < SAMPLE_THRESHOLD) {
@@ -92,11 +92,11 @@ object RecommendSimilarUser {
     }) // A, number, B
       .groupByKey()
       .map(x => {
-      val recommend = x._2.toSeq.sortWith(_._1 > _._1).take(CANDIDATES_SIZE)
+      val recommend = x._2.toSeq.filter(_._2 != x._1).sortWith(_._1 > _._1).take(CANDIDATES_SIZE)
       (x._1, recommend)
     })
 
-    commonFollower.map(x => (x._1 + "\t" + x._2.map(_._2).mkString(","))).saveAsTextFile(args(0))
+    commonFollower.map(x => (x._1 + "\t" + x._2.map(y => y._2 + ":" + y._1).mkString(","))).saveAsTextFile(args(0))
 
   }
 }
