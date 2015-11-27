@@ -88,5 +88,8 @@ object StepNumberAndBMI {
       .map(x => (x._1._1 + "\t" + x._1._2 + "\t" + x._2.toString))
 
     stepAndBMI.saveAsTextFile(args(4))
+
+    userStepAverageNumber.map(x => (x._2, 1)).reduceByKey((a, b) => a + b).saveAsTextFile(args(5))
+    userBMI.map(x => (x._2, 1)).reduceByKey((a, b) => a + b).saveAsTextFile(args(6))
   }
 }
