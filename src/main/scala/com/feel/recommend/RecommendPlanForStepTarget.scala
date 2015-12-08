@@ -11,6 +11,8 @@ import org.bson.BSONObject
 
 object RecommendPlanForStepTarget {
 
+  private val LEAST_STEP_RATIO = 0.05
+
   def main(args: Array[String]) = {
 
     val conf = new SparkConf()
@@ -57,7 +59,14 @@ object RecommendPlanForStepTarget {
       (user, (hour, mean))
     }).groupByKey()
     .map(x => {
-      (x._1, x._2.toList.sortWith(_._1 < _._1))
+      val stepSum = x._2.map(_._2).sum
+      (x._1, {
+        val hourRatio = x._2.toList.sortWith(_._1 < _._1).map(x => (x._1, x._2 / stepSum))
+          .filter(_._2 > LEAST_STEP_RATIO)
+        val rationInfo = hourRatio.map(_._2).sum
+        val target = hourRatio.map(x => (x._1, x._2 / rationInfo))
+        target
+      })
     })
 
     userStepAverageNumber.saveAsTextFile(args(2))
