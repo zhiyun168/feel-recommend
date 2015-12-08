@@ -24,7 +24,7 @@ object RecommendPlanForStepTarget {
       classOf[BSONObject])
 
     val userStepAverageNumber = stepRDD.map(x => {
-      val user = x._2.get("uid")
+      val user = x._2.get("uid").toString
       val goalType = x._2.get("goal_type").toString
       val stepInfo = {
         val step = try {
@@ -34,19 +34,31 @@ object RecommendPlanForStepTarget {
               val stepScore = deviceType match {
                 case "health" =>
                   x._2.get("info").asInstanceOf[BSONObject].get("records").asInstanceOf[BasicBSONList].toArray()
-                  .zipWithIndex.map(e => e._1 + ":" + e._2.toString).mkString(",")
+                  .map(_.asInstanceOf[BSONObject].get("step").toString.toInt).zipWithIndex.toList
               }
               stepScore
             }
-            case _ => ""
+            case _ => Nil
           }
         } catch {
-          case _ => ""
+          case _ => Nil
         }
         step
       }
       (user, stepInfo)
-    }).filter(_._2 != "")
+    }).filter(_._2 != Nil)
+    .flatMap(x => {
+      x._2.map(y => ((x._1, y._2), y._1))
+    }).groupByKey()
+    .map(x => {
+      val user = x._1._1
+      val hour = x._1._2
+      val mean = x._2.foldLeft(0D)((acc, value) => acc + value) / x._2.size
+      (user, (hour, mean))
+    }).groupByKey()
+    .map(x => {
+      (x._1, x._2.toList.sortWith(_._1 < _._1))
+    })
 
     userStepAverageNumber.saveAsTextFile(args(2))
   }
