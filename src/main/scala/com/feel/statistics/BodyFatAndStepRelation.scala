@@ -1,6 +1,10 @@
 package com.feel.statistics
 
 import org.apache.hadoop.conf.Configuration
+import org.apache.spark.mllib.linalg
+import org.apache.spark.mllib.linalg.Matrix
+import org.apache.spark.mllib.linalg._
+import org.apache.spark.mllib.stat.Statistics
 import org.apache.spark.{SparkContext, SparkConf}
 import org.bson.BSONObject
 
@@ -66,21 +70,30 @@ object BodyFatAndStepRelation {
     .flatMap(x => {
       val user = x._2.get("uid").toString
       val bodyInfo = x._2.get("info").asInstanceOf[BSONObject]
-      FAT_VALUE_CONFIG.map(x => ((user, x), bodyInfo.get(x).toString.toDouble))
+      FAT_VALUE_CONFIG.map(x => ((user, x), try {
+        bodyInfo.get(x).toString.toDouble
+      } catch {
+        case _ => Double.MinValue
+      }))
     }).groupByKey()
     .map(x => (x._1._1, (x._1._2, {
       x._2.foldLeft(0D)((acc, value) => {
         acc + value
       }) / x._2.size
     })))
-    .groupByKey()
-    .map(x => {
-      (x._1, x._2.toArray.sortWith(_._1 < _._1))
-    })
+      .filter(_._2._2 > 0D)
+      .groupByKey()
+      .map(x => {
+        (x._1, x._2.toArray.sortWith(_._1 < _._1))
+      })
 
     val userStepAndBodyInfo = userStepAverageNumber.join(userBodyInfo)
 
     userStepAndBodyInfo.saveAsTextFile(args(4))
-  }
 
+    val data = userStepAndBodyInfo.map(x => Vectors.dense(x._2._2.map(_._2)))
+    val corrInfo = sc.parallelize(List(Statistics.corr(data).toString()))
+
+    corrInfo.saveAsTextFile(args(5))
+  }
 }
