@@ -81,17 +81,18 @@ object BodyFatAndStepRelation {
         acc + value
       }) / x._2.size
     })))
-    .groupByKey()
-    .map(x => {
-      (x._1, x._2.toArray.sortWith(_._1 < _._1))
-    })
+      .filter(_._2._2 > 0D)
+      .groupByKey()
+      .map(x => {
+        (x._1, x._2.toArray.sortWith(_._1 < _._1))
+      })
 
     val userStepAndBodyInfo = userStepAverageNumber.join(userBodyInfo)
 
     userStepAndBodyInfo.saveAsTextFile(args(4))
 
     val data = userStepAndBodyInfo.map(x => Vectors.dense(x._2._2.map(_._2)))
-    val corrInfo = sc.parallelize((Statistics.corr(data).toString()))
+    val corrInfo = sc.parallelize(List(Statistics.corr(data).toString()))
 
     corrInfo.saveAsTextFile(args(5))
   }
