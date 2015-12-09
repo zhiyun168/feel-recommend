@@ -92,7 +92,11 @@ object BodyFatAndStepRelation {
     userStepAndBodyInfo.saveAsTextFile(args(4))
 
     val data = userStepAndBodyInfo.map(x => Vectors.dense(x._2._2.map(_._2)))
-    val corrInfo = sc.parallelize(List(Statistics.corr(data).toString()))
+    val corrInfoMatrix = Statistics.corr(data)
+    val matrixElements = for (i <- 0 until 100)
+      yield(FAT_VALUE_CONFIG(i / 10), FAT_VALUE_CONFIG(i % 10), corrInfoMatrix(i / 10, i % 10))
+
+    val corrInfo = sc.parallelize(matrixElements.toList)
 
     corrInfo.saveAsTextFile(args(5))
   }
