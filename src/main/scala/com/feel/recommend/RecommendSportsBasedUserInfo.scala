@@ -66,7 +66,7 @@ object RecommendSportsBasedUserInfo {
     val sleepRDD = sc.newAPIHadoopRDD(hadoopConf, classOf[com.mongodb.hadoop.MongoInputFormat], classOf[Object],
       classOf[BSONObject])
 
-    val userSleepInfo = sleepRDD.filter(x => x._2.get("").toString.equalsIgnoreCase("mi_band"))
+    val userSleepInfo = sleepRDD.filter(x => x._2.get("device").toString.equalsIgnoreCase("mi_band"))
     .map(x => {
       val user = x._2.get("uid").toString
       val sleepInfo = try {
