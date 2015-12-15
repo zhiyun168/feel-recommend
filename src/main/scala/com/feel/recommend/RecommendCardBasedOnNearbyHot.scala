@@ -12,7 +12,7 @@ import org.elasticsearch.spark._
 object RecommendCardBasedOnNearbyHot {
 
 
-  private val SAMPLE_THRESHOLD = 2000
+  private val SAMPLE_THRESHOLD = 1500
   private val REAL_USER_ID_THRESHOLD = 1075
   private val CANDIDATES_SIZE = 100
   private val DISTANCE_THRESHOLD = 10000D
@@ -123,7 +123,9 @@ object RecommendCardBasedOnNearbyHot {
       val user = x._1
       val followingSet = x._2._2
       val candidates = x._2._1.filter(y => !followingSet(y._1)).map(_._2).toSeq.sortWith(_._2 > _._2)
-        .map(_._1 + ":" + DISTANCE_THRESHOLD.toString)
+        .map(_._1)
+        .distinct
+        .map(_ + ":" + DISTANCE_THRESHOLD.toString)
         .take(CANDIDATES_SIZE)
       (user, candidates)
     })
