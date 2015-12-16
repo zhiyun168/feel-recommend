@@ -13,8 +13,7 @@ object RecommendSimilarUser {
   private val USER_NUMBER_BOTTOM_BOUND = 2
   private var CANDIDATES_SIZE = 200
   private val RDD_PARTITION_SIZE = 100
-  private var COMMON_FOLLOWER_NUMBER = 5
-  private val SAMPLE_THRESHOLD = 5000
+  private val SAMPLE_THRESHOLD = 2500
   private var FOLLOWER_THRESHOLD = 500
 
   def knuthShuffle[T](x: Array[T]) = {
@@ -40,11 +39,6 @@ object RecommendSimilarUser {
       .filter(_.length == 2)
       .filter(x => x(0).toInt >= REAL_USER_ID_BOUND && x(1).toInt >= REAL_USER_ID_BOUND)
 
-    val followerNumber = followList
-      .map(x => (x(0), 1))
-      .reduceByKey(_ + _)
-      .filter(_._2 <= FOLLOWER_THRESHOLD)
-
     val recentlyActiveUser = sc.textFile(args(2))
       .map(_.split("\t"))
       .filter(_.length == 2)
@@ -53,13 +47,9 @@ object RecommendSimilarUser {
       .distinct(RDD_PARTITION_SIZE)
       .map(x => (x, "_")) // recently active user
 
-    COMMON_FOLLOWER_NUMBER = args(6).toInt
-
     val commonFollower = followList
       .map(x => (x(0), x(1))) // leader, follower
       .join(recentlyActiveUser) // r user
-      .map(x => (x._1, x._2._1)) // rleader, follower
-      .join(followerNumber)
       .map(x => (x._2._1, x._1)) // follower, rleader
       .groupByKey() //action
       .map(x => x._2.toArray)
@@ -85,7 +75,6 @@ object RecommendSimilarUser {
       .filter(x => x != "" && x != null)
       .map(x => (x, 1))
       .reduceByKey((a, b) => a + b)
-      .filter(_._2 >= COMMON_FOLLOWER_NUMBER)
       .map(x => {
       val pair = x._1.split("\t")
       (pair(0), (x._2, pair(1)))
