@@ -1,6 +1,7 @@
 package com.feel.recommend
 
 import breeze.linalg.min
+import org.apache.spark.storage.StorageLevel
 import scala.collection.mutable
 import scala.util.Random.nextInt
 import org.apache.spark.{SparkContext, SparkConf}
@@ -38,42 +39,49 @@ object RecommendCardBasedOnGoalJoined {
 
     val sc = new SparkContext(conf)
 
+    val recentlyActiveUser = sc.textFile(args(7))
+      .map(x => x.split("\t"))
+      .filter(_.length == 2)
+      .map(x => (x(0), x(1)))
 
     val userGoal = sc.textFile(args(1)) // user, goal
       .map(_.split("\t"))
       .filter(x => x.length == 2 && x(0).toInt >= REAL_USER_ID_BOUND)
+      .map(x => (x(0), x(1)))
+      .join(recentlyActiveUser)
+      .map(x => (x._2._1, x._1))
 
-    val goalUserRecommend = userGoal.map(x => (x(1), x(0)))
-    .groupByKey()
-    .flatMap(x => {
-      val goalUserNumber = x._2.size
-      val goalUsers = x._2.toArray
-      if (x._2.size >= GOAL_USER_NUMBER_THRESHOLD) {
-        val itNumber = min(goalUserNumber / GOAL_USER_NUMBER_THRESHOLD, 10)
-        val result = new Array[(String, (String, String))](itNumber * GOAL_USER_NUMBER_THRESHOLD *
-          GOAL_USER_NUMBER_THRESHOLD)
-        for(it <- 0 until itNumber) {
-          val sampledUsers = knuthShuffle(goalUsers).take(GOAL_USER_NUMBER_THRESHOLD)
-          for(i <- 0 until GOAL_USER_NUMBER_THRESHOLD) {
-            for(j <- 0 until GOAL_USER_NUMBER_THRESHOLD) {
-              if (i != j)
-                result(it * GOAL_USER_NUMBER_THRESHOLD * GOAL_USER_NUMBER_THRESHOLD + i * GOAL_USER_NUMBER_THRESHOLD +
-                  j) = (sampledUsers(i), (sampledUsers(j), x._1))
+    val goalUserRecommend = userGoal
+      .groupByKey()
+      .flatMap(x => {
+        val goalUserNumber = x._2.size
+        val goalUsers = x._2.toArray
+        if (x._2.size >= GOAL_USER_NUMBER_THRESHOLD) {
+          val itNumber = min(goalUserNumber / GOAL_USER_NUMBER_THRESHOLD, 10)
+          val result = new Array[(String, (String, String))](itNumber * GOAL_USER_NUMBER_THRESHOLD *
+            GOAL_USER_NUMBER_THRESHOLD)
+          for(it <- 0 until itNumber) {
+            val sampledUsers = knuthShuffle(goalUsers).take(GOAL_USER_NUMBER_THRESHOLD)
+            for(i <- 0 until GOAL_USER_NUMBER_THRESHOLD) {
+              for(j <- 0 until GOAL_USER_NUMBER_THRESHOLD) {
+                if (i != j)
+                  result(it * GOAL_USER_NUMBER_THRESHOLD * GOAL_USER_NUMBER_THRESHOLD + i * GOAL_USER_NUMBER_THRESHOLD +
+                    j) = (sampledUsers(i), (sampledUsers(j), x._1))
+              }
             }
           }
-        }
-        result.filter(_ != null).distinct.toSeq
-      } else {
-        val result = new Array[(String, (String, String))](goalUserNumber * goalUserNumber)
-        for(i <- 0 until goalUserNumber) {
-          for(j <- 0 until goalUserNumber) {
-            if (i != j)
-              result(i * goalUserNumber + j) = (goalUsers(i), (goalUsers(j), x._1))
+          result.filter(_ != null).distinct.toSeq
+        } else {
+          val result = new Array[(String, (String, String))](goalUserNumber * goalUserNumber)
+          for(i <- 0 until goalUserNumber) {
+            for(j <- 0 until goalUserNumber) {
+              if (i != j)
+                result(i * goalUserNumber + j) = (goalUsers(i), (goalUsers(j), x._1))
+            }
           }
+          result.filter(_ != null).toSeq
         }
-        result.filter(_ != null).toSeq
-      }
-    })
+      })
 
     val cardLikedNumber = sc.textFile(args(2))
       .map(_.split("\t")) //user, card
