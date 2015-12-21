@@ -1,7 +1,7 @@
 package com.feel.statistics
 
 import java.text.SimpleDateFormat
-import java.util.Date
+import java.util.{TimeZone, Calendar, Date}
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.spark.SparkContext
@@ -11,6 +11,19 @@ import org.bson.BSONObject
   * Created by canoe on 12/21/15.
   */
 object SameAgeUserHealthInfo {
+
+  def getLastPastWeekBeginEndDay() = {
+    val calender = Calendar.getInstance(TimeZone.getDefault())
+    val date = calender.getTime()
+    val dayGap = calender.get(Calendar.DAY_OF_WEEK) - Calendar.SUNDAY
+    date.setTime(date.getTime() - (dayGap * 1000 * 60 * 60 * 24))
+    calender.setTime(date)
+    val sundayTs = calender.getTimeInMillis / 1000
+    date.setTime(date.getTime() - ((dayGap + 5) * 1000 * 60 * 60 * 24))
+    calender.setTime(date)
+    val mondayTs = calender.getTimeInMillis / 1000
+    (mondayTs, sundayTs)
+  }
 
   def main(args: Array[String]) = {
 
@@ -59,9 +72,8 @@ object SameAgeUserHealthInfo {
     hadoopConf.set("mongo.auth.uri", args(2))
     hadoopConf.set("mongo.input.uri", args(3))
 
-    val dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-    val startTime = dateFormat.parse(args(4)).getTime() / 1000
-    val endTime = dateFormat.parse(args(5)).getTime() / 1000
+    val tsTuple = getLastPastWeekBeginEndDay()
+    val (startTime, endTime) = tsTuple
     val dataRDD = sc.newAPIHadoopRDD(hadoopConf, classOf[com.mongodb.hadoop.MongoInputFormat], classOf[Object],
       classOf[BSONObject])
 
@@ -101,7 +113,7 @@ object SameAgeUserHealthInfo {
 
         val sleepMean = (sleepInfo._1 / x._2.size, sleepInfo._1 / x._2.size)
         (key, sleepMean)
-      }).saveAsTextFile(args(6))
+      }).saveAsTextFile(args(4))
 
     val userStepNumber = dataRDD.map(x => {
       val user = x._2.get("uid").toString
@@ -151,7 +163,7 @@ object SameAgeUserHealthInfo {
           acc + value
         }) / x._2.size
         (key, stepInfo)
-      }).saveAsTextFile(args(7))
+      }).saveAsTextFile(args(5))
 
     val userBodyInfo = dataRDD.filter(x => x._2.get("device").toString.equalsIgnoreCase("picooc"))
       .map(x => {
@@ -181,6 +193,7 @@ object SameAgeUserHealthInfo {
           acc + value
         }) / x._2.size
         (key, stepInfo)
-      }).saveAsTextFile(args(8))
+      }).saveAsTextFile(args(6))
+
   }
 }
