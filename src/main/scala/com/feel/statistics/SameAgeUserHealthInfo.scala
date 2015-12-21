@@ -62,10 +62,10 @@ object SameAgeUserHealthInfo {
     val dateFormat = new SimpleDateFormat("yyyy-MM-dd");
     val startTime = dateFormat.parse(args(4)).getTime() / 1000
     val endTime = dateFormat.parse(args(5)).getTime() / 1000
-    val sleepRDD = sc.newAPIHadoopRDD(hadoopConf, classOf[com.mongodb.hadoop.MongoInputFormat], classOf[Object],
+    val dataRDD = sc.newAPIHadoopRDD(hadoopConf, classOf[com.mongodb.hadoop.MongoInputFormat], classOf[Object],
       classOf[BSONObject])
 
-    val userSleepInfo = sleepRDD.filter(x => x._2.get("device").toString.equalsIgnoreCase("mi_band"))
+    val userSleepInfo = dataRDD.filter(x => x._2.get("device").toString.equalsIgnoreCase("mi_band"))
       .map(x => {
         val user = x._2.get("uid").toString
         val sleepInfo = try {
@@ -75,7 +75,7 @@ object SameAgeUserHealthInfo {
           val ts = miBandInfo.get("created").toString.toLong
           (shallowSleepTime, deepSleepTime, ts)
         } catch {
-          case _ => (-1D, -1D, -1D)
+          case _ => (-1D, -1D, -1L)
         }
         (user, sleepInfo)
       }).filter(x => x._2._1 != -1D && x._2._3 >= startTime && x._2._3 < endTime)
@@ -102,5 +102,85 @@ object SameAgeUserHealthInfo {
         val sleepMean = (sleepInfo._1 / x._2.size, sleepInfo._1 / x._2.size)
         (key, sleepMean)
       }).saveAsTextFile(args(6))
+
+    val userStepNumber = dataRDD.map(x => {
+      val user = x._2.get("uid").toString
+      val goalType = x._2.get("goal_type").toString
+      val ts = x._2.get("record_time").toString.toLong / 1000
+      val stepNumber = if (ts >= startTime && ts < endTime) {
+        val step = try {
+          goalType match {
+            case "3" => {
+              val deviceType = x._2.get("device")
+              val stepScore = deviceType match {
+                case "mi_band" =>
+                  x._2.get("info").asInstanceOf[BSONObject].get("step").toString.toLong
+                case _ =>
+                  x._2.get("info").asInstanceOf[BSONObject].get("sum").asInstanceOf[BSONObject].get("step")
+                    .toString.toLong
+              }
+              stepScore
+            }
+            case _ => 0
+          }
+        } catch {
+          case _ => 0
+        }
+        step
+      } else {
+        0
+      }
+      (user, stepNumber)
+    }).filter(_._2 != 0)
+      .groupByKey()
+      .map(x => {
+        val user = x._1
+        val mean = x._2.foldLeft((0D))((acc, value) => {
+          acc + value
+        }) / x._2.size
+        (user, mean)
+      })
+
+    userInfo.join(userStepNumber)
+      .map(x => {
+        x._2
+      }).groupByKey()
+      .map(x => {
+        val key = x._1._1
+        val stepInfo = x._2.foldLeft(0D)((acc, value) => {
+          acc + value
+        }) / x._2.size
+        (key, stepInfo)
+      }).saveAsTextFile(args(7))
+
+    val userBodyInfo = dataRDD.filter(x => x._2.get("device").toString.equalsIgnoreCase("picooc"))
+      .map(x => {
+        val user = x._2.get("uid").toString
+        val bodyInfo = x._2.get("info").asInstanceOf[BSONObject]
+        val fatLevel = try {
+          bodyInfo.get("viseral_fat_level").toString.toDouble
+        } catch {
+          case _ => Double.MinValue
+        }
+        (user, fatLevel)
+      }).filter(_._2 == Double.MinValue)
+      .groupByKey()
+      .map(x => (x._1,
+        x._2.foldLeft(0D)((acc, value) => {
+          acc + value
+        }) / x._2.size)
+      )
+
+    userInfo.join(userBodyInfo)
+      .map(x => {
+        x._2
+      }).groupByKey()
+      .map(x => {
+        val key = x._1._1
+        val stepInfo = x._2.foldLeft(0D)((acc, value) => {
+          acc + value
+        }) / x._2.size
+        (key, stepInfo)
+      }).saveAsTextFile(args(8))
   }
 }
