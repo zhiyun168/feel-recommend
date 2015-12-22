@@ -84,13 +84,14 @@ object SameAgeUserHealthInfo {
           val miBandInfo = x._2.get("info").asInstanceOf[BSONObject]
           val shallowSleepTime = miBandInfo.get("shallowSleepTime").toString.toDouble
           val deepSleepTime = miBandInfo.get("deepSleepTime").toString.toDouble
-          val ts = miBandInfo.get("created").toString.toLong
+          val ts = x._2.get("record_time").toString.toLong / 1000
           (shallowSleepTime, deepSleepTime, ts)
         } catch {
           case _ => (-1D, -1D, -1L)
         }
         (user, sleepInfo)
-      }).filter(x => x._2._1 != -1D && x._2._3 >= startTime && x._2._3 < endTime)
+      })
+      .filter(x => x._2._1 > 0D && x._2._2 > 0D && x._2._3 >= startTime && x._2._3 < endTime)
       .groupByKey()
       .map(x => {
         val user = x._1
@@ -110,8 +111,7 @@ object SameAgeUserHealthInfo {
         val sleepInfo = x._2.foldLeft((0D, 0D))((acc, value) => {
           (acc._1 + value._1, acc._2 + value._2)
         })
-
-        val sleepMean = (sleepInfo._1 / x._2.size, sleepInfo._1 / x._2.size)
+        val sleepMean = (sleepInfo._1 / x._2.size, sleepInfo._2 / x._2.size)
         (key, sleepMean)
       }).saveAsTextFile(args(4))
 
@@ -158,7 +158,7 @@ object SameAgeUserHealthInfo {
         x._2
       }).groupByKey()
       .map(x => {
-        val key = x._1._1
+        val key = x._1._1 + "\t" + x._1._2
         val stepInfo = x._2.foldLeft(0D)((acc, value) => {
           acc + value
         }) / x._2.size
@@ -170,12 +170,12 @@ object SameAgeUserHealthInfo {
         val user = x._2.get("uid").toString
         val bodyInfo = x._2.get("info").asInstanceOf[BSONObject]
         val fatLevel = try {
-          bodyInfo.get("viseral_fat_level").toString.toDouble
+          bodyInfo.get("body_fat_race").toString.toDouble
         } catch {
           case _ => Double.MinValue
         }
         (user, fatLevel)
-      }).filter(_._2 == Double.MinValue)
+      }).filter(_._2 != Double.MinValue)
       .groupByKey()
       .map(x => (x._1,
         x._2.foldLeft(0D)((acc, value) => {
@@ -188,12 +188,11 @@ object SameAgeUserHealthInfo {
         x._2
       }).groupByKey()
       .map(x => {
-        val key = x._1._1
+        val key = x._1._1 + "\t" + x._1._2
         val stepInfo = x._2.foldLeft(0D)((acc, value) => {
           acc + value
         }) / x._2.size
         (key, stepInfo)
       }).saveAsTextFile(args(6))
-
   }
 }
