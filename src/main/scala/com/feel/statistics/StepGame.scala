@@ -2,7 +2,7 @@ package com.feel.statistics
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.spark.SparkContext
-import org.apache.spark.mllib.clustering.KMeans
+import org.apache.spark.mllib.clustering.{GaussianMixture, KMeans}
 import org.apache.spark.mllib.linalg.Vectors
 import org.bson.BSONObject
 import org.bson.types.BasicBSONList
@@ -42,9 +42,20 @@ object StepGame {
         (x._1, Vectors.dense(x._2.toArray.sortWith(_._1 < _._1).map(_._2)))
       })
 
-    val model = KMeans.train(userStepNumber.map(_._2), 3, 50)
-    userStepNumber.map(x => {
-      (model.predict(x._2), (x._2, x._1))
-    }).saveAsTextFile(args(2))
+    args(5) match {
+      case "kmeans" => {
+        val model = KMeans.train(userStepNumber.map(_._2), args(3).toInt, args(4).toInt)
+        userStepNumber.map(x => {
+          (model.predict (x._2), (x._2, x._1) )
+        }).saveAsTextFile(args(2))
+      }
+      case "gmm" => {
+        val gmm = new GaussianMixture().setK(args(3).toInt).setMaxIterations(args(4).toInt)
+          .run(userStepNumber.map(_._2))
+        userStepNumber.map(x => {
+          (gmm.predict(x._2), (x._2, x._1))
+        }).saveAsTextFile(args(2))
+      }
+    }
   }
 }
