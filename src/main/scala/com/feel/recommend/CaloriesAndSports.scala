@@ -1,5 +1,8 @@
 package com.feel.recommend
 
+import java.text.SimpleDateFormat
+import java.util.Calendar
+
 import org.apache.hadoop.conf.Configuration
 import org.apache.spark.SparkContext
 import org.bson.BSONObject
@@ -10,7 +13,12 @@ import org.bson.BSONObject
 object CaloriesAndSports {
 
   def getTodayBeginEndTs() = {
-    (0L, 0L)
+    val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
+    val calendar = Calendar.getInstance()
+    val startTime = dateFormat.parse(dateFormat.format(calendar.getTime)).getTime / 1000
+    calendar.add(Calendar.DATE, 1)
+    val endTime = dateFormat.parse(dateFormat.format(calendar.getTime)).getTime / 1000
+    (startTime, endTime)
   }
 
   def main(args: Array[String]) = {
