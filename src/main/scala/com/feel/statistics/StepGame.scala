@@ -41,7 +41,7 @@ object StepGame {
       .groupByKey()
       .filter(_._2.map(_._2).max > 500D)
       .map(x => {
-        val maxValue = x._2.map(_._2).max
+        val maxValue = x._2.map(_._2).sum
         (x._1, Vectors.dense(x._2.toArray.sortWith(_._1 < _._1).map(_._2 / maxValue)))
       })
 
@@ -61,7 +61,6 @@ object StepGame {
         .map(x => {
           x._1 + "\t" + x._2.toSeq.sortWith(_._1 < _._1).map(_._2).mkString(";")
         }).saveAsTextFile(args(2))
-
       }
       case "gmm" => {
         val model = new GaussianMixture().setK(args(3).toInt).setMaxIterations(args(4).toInt)
