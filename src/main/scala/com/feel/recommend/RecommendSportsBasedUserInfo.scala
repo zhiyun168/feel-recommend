@@ -3,7 +3,9 @@ package com.feel.recommend
 import org.apache.hadoop.conf.Configuration
 import org.apache.spark.{SparkConf, SparkContext}
 import org.bson.BSONObject
+import org.elasticsearch.spark._
 
+case class SportsRecommend(user: String, candidates: Seq[String])
 /**
   * Created by canoe on 12/14/15.
   */
@@ -105,8 +107,9 @@ object RecommendSportsBasedUserInfo {
         if (infoSet.contains("badSleep")) {
           mask |= 4
         }
-        (user, (mask, sportsSetList(mask) | ALL_SET))
+        (user, (mask, (sportsSetList(mask) | ALL_SET).toSeq))
       })
     userSports.saveAsTextFile(args(3))
+    userSports.map(x => SportsRecommend(x._1, x._2._2)).saveToEs("recommend/sports")
   }
 }
