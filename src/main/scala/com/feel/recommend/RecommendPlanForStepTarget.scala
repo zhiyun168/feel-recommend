@@ -18,6 +18,8 @@ object RecommendPlanForStepTarget {
   def main(args: Array[String]) = {
 
     val conf = new SparkConf()
+    conf.set("es.mapping.id", "user")
+    conf.set("es.nodes", args(3))
     val sc = new SparkContext(conf)
 
     val hadoopConf = new Configuration()

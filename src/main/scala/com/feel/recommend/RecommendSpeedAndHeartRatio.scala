@@ -4,7 +4,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 
 import org.apache.hadoop.conf.Configuration
-import org.apache.spark.SparkContext
+import org.apache.spark.{SparkConf, SparkContext}
 import org.bson.BSONObject
 import org.elasticsearch.spark._
 
@@ -17,6 +17,9 @@ object RecommendSpeedAndHeartRatio {
 
   def main(args: Array[String]) = {
     val sc = new SparkContext()
+    val conf = new SparkConf()
+    conf.set("es.mapping.id", "user")
+    conf.set("es.nodes", args(4))
 
     val userMaxHeartRatio = sc.textFile(args(0))
       .map(_.split("\t"))

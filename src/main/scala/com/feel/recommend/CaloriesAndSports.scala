@@ -4,7 +4,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 
 import org.apache.hadoop.conf.Configuration
-import org.apache.spark.SparkContext
+import org.apache.spark.{SparkConf, SparkContext}
 import org.bson.BSONObject
 import org.elasticsearch.spark._
 
@@ -31,6 +31,10 @@ object CaloriesAndSports {
 
     hadoopConf.set("mongo.auth.uri", args(0))
     hadoopConf.set("mongo.input.uri", args(1))
+
+    val conf = new SparkConf()
+    conf.set("es.mapping.id", "user")
+    conf.set("es.nodes", args(3))
 
     val dataRDD = sc.newAPIHadoopRDD(hadoopConf, classOf[com.mongodb.hadoop.MongoInputFormat], classOf[Object],
       classOf[BSONObject])
