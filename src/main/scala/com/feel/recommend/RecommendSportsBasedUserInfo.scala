@@ -47,7 +47,7 @@ object RecommendSportsBasedUserInfo {
         val user = x._2.get("uid").toString
         val fatInfo = try {
           val bodyInfo = x._2.get("info").asInstanceOf[BSONObject]
-          val fatInfo =  bodyInfo.get("viseral_fat_level").toString.toDouble
+          val fatInfo =  bodyInfo.get("body_fat_race").toString.toDouble
           val ts = bodyInfo.get("created").toString.toLong
           (fatInfo, ts)
         } catch {
