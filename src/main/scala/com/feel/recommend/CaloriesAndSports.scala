@@ -6,6 +6,9 @@ import java.util.Calendar
 import org.apache.hadoop.conf.Configuration
 import org.apache.spark.SparkContext
 import org.bson.BSONObject
+import org.elasticsearch.spark._
+
+case class CaloriesDiff(user: String, diff: String)
 
 /**
   * Created by canoe on 12/10/15.
@@ -142,6 +145,7 @@ object CaloriesAndSports {
       })
 
     userCaloriesDiff.saveAsTextFile(args(2))
+    userCaloriesDiff.map(x => CaloriesDiff(x._1, x._2.toString)).saveToEs("user/caloriesdiff")
 
   }
 }

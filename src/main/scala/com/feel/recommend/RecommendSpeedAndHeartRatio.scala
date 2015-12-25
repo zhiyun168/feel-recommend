@@ -6,6 +6,9 @@ import java.util.Date
 import org.apache.hadoop.conf.Configuration
 import org.apache.spark.SparkContext
 import org.bson.BSONObject
+import org.elasticsearch.spark._
+
+case class SpeedAndHeartRatio(user: String, heartRatio: String)
 
 /**
   * Created by canoe on 12/16/15.
@@ -78,7 +81,7 @@ object RecommendSpeedAndHeartRatio {
           })
         (user, fixedMaxHeartRatio)
       })
-
+    fixedUserMaxHeartRatio.map(x => SpeedAndHeartRatio(x._1, x._2.toString)).saveToEs("user/fixedmaxheartratio")
     fixedUserMaxHeartRatio.saveAsTextFile(args(3))
   }
 }
