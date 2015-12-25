@@ -4,7 +4,9 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.spark.{SparkContext, SparkConf}
 import org.bson.types.BasicBSONList
 import org.bson.BSONObject
+import org.elasticsearch.spark._
 
+case class UserStepAverageNumber(user: String, stepPlan: Seq[(Int, Double)])
 /**
   * Created by canoe on 12/7/15.
   */
@@ -68,7 +70,7 @@ object RecommendPlanForStepTarget {
         target
       })
     })
-
+    userStepAverageNumber.map(x => UserStepAverageNumber(x._1, x._2.toSeq)).saveToEs("recommend/userstepplan")
     userStepAverageNumber.saveAsTextFile(args(2))
   }
 }
