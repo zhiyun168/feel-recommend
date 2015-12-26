@@ -16,11 +16,11 @@ case class SpeedAndHeartRatio(user: String, heartRatio: String)
 object RecommendSpeedAndHeartRatio {
 
   def main(args: Array[String]) = {
-    val sc = new SparkContext()
     val conf = new SparkConf()
     conf.set("es.mapping.id", "user")
     conf.set("es.nodes", args(4))
-
+    val sc = new SparkContext(conf)
+    
     val userMaxHeartRatio = sc.textFile(args(0))
       .map(_.split("\t"))
       .filter(_.length == 2)
