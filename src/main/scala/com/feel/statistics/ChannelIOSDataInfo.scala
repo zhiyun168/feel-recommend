@@ -1,7 +1,7 @@
 package com.feel.statistics
 
 import java.text.SimpleDateFormat
-import java.util.Calendar
+import java.util.{TimeZone, Calendar}
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.spark.SparkContext
@@ -14,6 +14,7 @@ object ChannelIOSDataInfo {
 
   def getYesterdayBeginEndTs() = {
     val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
+    TimeZone.setDefault(TimeZone.getTimeZone("GMT+8"))
     val calendar = Calendar.getInstance()
     val endTime = dateFormat.parse(dateFormat.format(calendar.getTime)).getTime / 1000
     calendar.add(Calendar.DATE, -1)
@@ -30,6 +31,7 @@ object ChannelIOSDataInfo {
       classOf[BSONObject])
 
     val (startTime, endTime) = getYesterdayBeginEndTs()
+
     val data = mongoRDD.filter(x => x._2.get("client").toString.equalsIgnoreCase("ios"))
       .map(x => {
         try {
