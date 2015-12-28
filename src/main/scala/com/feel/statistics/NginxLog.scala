@@ -27,7 +27,7 @@ object NginxLog {
             ) == str.length)  "id"
             else str
           }
-          api.split("\\/").map(replaceStr(_)).mkString("/")
+          "/" + api.split("\\/").map(replaceStr(_)).filter(_ != "").mkString("/")
         }), 1)
         )).reduceByKey((a, b) => a + b)
     .sortBy(_._2)

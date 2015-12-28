@@ -4,8 +4,9 @@ import java.text.SimpleDateFormat
 import java.util.{TimeZone, Calendar, Date}
 
 import org.apache.hadoop.conf.Configuration
-import org.apache.spark.SparkContext
+import org.apache.spark.{SparkConf, SparkContext}
 import org.bson.BSONObject
+import org.elasticsearch.spark._
 
 /**
   * Created by canoe on 12/21/15.
@@ -13,21 +14,27 @@ import org.bson.BSONObject
 object SameAgeUserHealthInfo {
 
   def getLastPastWeekBeginEndDay() = {
+    TimeZone.setDefault(TimeZone.getTimeZone("GMT+8"))
     val calender = Calendar.getInstance(TimeZone.getDefault())
     val date = calender.getTime()
     val dayGap = calender.get(Calendar.DAY_OF_WEEK) - Calendar.SUNDAY
     date.setTime(date.getTime() - (dayGap * 1000 * 60 * 60 * 24))
     calender.setTime(date)
     val sundayTs = calender.getTimeInMillis / 1000
-    date.setTime(date.getTime() - ((dayGap + 5) * 1000 * 60 * 60 * 24))
+    date.setTime(date.getTime() - (6 * 1000 * 60 * 60 * 24))
     calender.setTime(date)
     val mondayTs = calender.getTimeInMillis / 1000
     (mondayTs, sundayTs)
   }
 
+  case class Info(key: String, value: String)
+
   def main(args: Array[String]) = {
 
-    val sc = new SparkContext()
+    val conf = new SparkConf()
+    conf.set("es.mapping.id", "key")
+    conf.set("es.nodes", args(7))
+    val sc = new SparkContext(conf)
 
     val userGender = sc.textFile(args(0))
       .map(x => x.split("\t"))
@@ -56,7 +63,6 @@ object SameAgeUserHealthInfo {
         (user, age)
       })
       .filter(x => x._2 >= 10 && x._2 <= 130)
-
 
     val userInfo = userGender.leftOuterJoin(userAge)
       .map(x => {
@@ -102,7 +108,7 @@ object SameAgeUserHealthInfo {
         (user, sleepMean)
       })
 
-    userInfo.join(userSleepInfo)
+    val sleepInfo = userInfo.join(userSleepInfo)
       .map(x => {
         x._2
       }).groupByKey()
@@ -113,7 +119,9 @@ object SameAgeUserHealthInfo {
         })
         val sleepMean = (sleepInfo._1 / x._2.size, sleepInfo._2 / x._2.size)
         (key, sleepMean)
-      }).saveAsTextFile(args(4))
+      })
+      sleepInfo.saveAsTextFile(args(4))
+      sleepInfo.map(x => Info(x._1, x._2._1 + "\t" + x._2._2)).saveToEs("report/sleep")
 
     val userStepNumber = dataRDD.map(x => {
       val user = x._2.get("uid").toString
@@ -153,7 +161,7 @@ object SameAgeUserHealthInfo {
         (user, mean)
       })
 
-    userInfo.join(userStepNumber)
+    val stepInfo = userInfo.join(userStepNumber)
       .map(x => {
         x._2
       }).groupByKey()
@@ -163,7 +171,10 @@ object SameAgeUserHealthInfo {
           acc + value
         }) / x._2.size
         (key, stepInfo)
-      }).saveAsTextFile(args(5))
+      })
+    stepInfo.saveAsTextFile(args(5))
+    stepInfo.map(x => Info(x._1, x._2.toString)).saveToEs("report/step")
+
 
     val userBodyInfo = dataRDD.filter(x => x._2.get("device").toString.equalsIgnoreCase("picooc"))
       .map(x => {
@@ -183,16 +194,18 @@ object SameAgeUserHealthInfo {
         }) / x._2.size)
       )
 
-    userInfo.join(userBodyInfo)
+    val bodyInfo = userInfo.join(userBodyInfo)
       .map(x => {
         x._2
       }).groupByKey()
       .map(x => {
         val key = x._1._1 + "\t" + x._1._2
-        val stepInfo = x._2.foldLeft(0D)((acc, value) => {
+        val bodyInfo = x._2.foldLeft(0D)((acc, value) => {
           acc + value
         }) / x._2.size
-        (key, stepInfo)
-      }).saveAsTextFile(args(6))
+        (key, bodyInfo)
+      })
+    bodyInfo.saveAsTextFile(args(6))
+    bodyInfo.map(x => Info(x._1, x._2.toString)).saveToEs("report/body")
   }
 }
