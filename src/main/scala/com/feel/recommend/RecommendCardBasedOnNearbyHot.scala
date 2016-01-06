@@ -57,6 +57,11 @@ object RecommendCardBasedOnNearbyHot {
 
     val sc = new SparkContext(conf)
 
+    val recentlyActiveUser = sc.textFile(args(4))
+      .map(x => x.split("\t"))
+      .filter(_.length == 2)
+      .map(x => (x(0), x(1)))
+
     val userNearby = sc.textFile(args(1))
       .map(_.split("\t"))
       .filter(_.length == 4)
@@ -71,11 +76,16 @@ object RecommendCardBasedOnNearbyHot {
             })
           val user = x(3).replaceAll("[\\[\\]]", "").split(",")(2).split("#")(1)
           val gpsTupleTmp = locationInfo._2.split(" ")
-          (locationInfo._1, (user, (gpsTupleTmp(0).toDouble, gpsTupleTmp(1).toDouble)))
+          (user, (locationInfo._1, (gpsTupleTmp(0).toDouble, gpsTupleTmp(1).toDouble)))
         } catch {
           case _ => ("", ("", (0D, 0D)))
         }
-      }).filter(x => x != ("", ("", (0D, 0D))) && x._1 != "lat#1.0" && x._2._1 != "lon#1.0")
+      })
+      .filter(x => x != ("", ("", (0D, 0D))))
+      .join(recentlyActiveUser)
+      .map(x => {
+        (x._2._1._1, (x._1, x._2._1._2))
+      })
       .groupByKey()
       .flatMap(x => {
         val userInfo = if (x._2.size >= SAMPLE_THRESHOLD) {
@@ -105,11 +115,6 @@ object RecommendCardBasedOnNearbyHot {
       .filter(_.length == 2)
       .map(x => (x(1), 1))
       .reduceByKey((a, b) => a + b) // card, cardLikedNumber
-
-    val recentlyActiveUser = sc.textFile(args(4))
-      .map(x => x.split("\t"))
-      .filter(_.length == 2)
-      .map(x => (x(0), x(1)))
 
     val userFollowingSet = sc.textFile(args(5))
       .map(_.split("\t"))
