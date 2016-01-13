@@ -167,7 +167,7 @@ object StepReport {
           left = middle + 1
         }
       }
-      (user, (info, (index.toDouble * 100 / size).formatted("%.1f") + "%"))
+      (user, (info, (100 - index.toDouble * 100 / size).formatted("%.1f") + "%"))
     }}).saveAsTextFile(args(5))
   }
 }
