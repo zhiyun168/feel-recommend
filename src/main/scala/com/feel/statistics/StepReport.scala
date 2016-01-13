@@ -4,8 +4,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 
 import breeze.linalg.min
+import com.feel.utils.TimeIssues
 import org.apache.hadoop.conf.Configuration
-import org.apache.spark.{SparkContext, SparkConf}
+import org.apache.spark.SparkContext
 import org.bson.BSONObject
 
 import scala.util.Random._
@@ -21,7 +22,6 @@ object StepReport {
   def main(args: Array[String]) = {
 
     val sc = new SparkContext()
-    //val conf = new SparkConf()
 
     val hadoopConf = new Configuration()
     hadoopConf.set("mongo.auth.uri", args(0))
@@ -29,9 +29,8 @@ object StepReport {
     val mongoRDD = sc.newAPIHadoopRDD(hadoopConf, classOf[com.mongodb.hadoop.MongoInputFormat], classOf[Object],
       classOf[BSONObject])
 
-    val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
-    val startTime = dateFormat.parse(args(2)).getTime() / 1000
-    val endTime = dateFormat.parse(args(3)).getTime() / 1000
+    val startTime = TimeIssues.nDaysAgoTs(7)
+    val endTime = TimeIssues.nDaysAgoTs(0)
 
     val userStepNumber = mongoRDD.map(x => {
       val user = x._2.get("uid").toString
@@ -64,7 +63,7 @@ object StepReport {
     }).filter(_._2 != 0)
       .reduceByKey((a, b) => a + b)
 
-    val userFollowing = sc.textFile(args(4))
+    val userFollowing = sc.textFile(args(2))
       .map(_.split("\t"))
       .filter(_.length == 2) //leader, follower
       .filter(x => x(0).toInt >= REAL_USER_ID_BOUND && x(1).toInt >= REAL_USER_ID_BOUND)
@@ -98,21 +97,15 @@ object StepReport {
       (user, rank)
     }
     })
-    rankInFollowingUserStep.saveAsTextFile(args(5))
+    rankInFollowingUserStep.saveAsTextFile(args(3))
 
-    val allMean = userStepNumber.map(_._2).mean()
-
-    val userGender = sc.textFile(args(6))
+    val userInfo = sc.textFile(args(4))
       .map(_.split("\t"))
-      .filter(_.length == 2)
-      .map(x => (x(0), x(1)))
-
-    val userAge = sc.textFile(args(7))
-      .map(_.split("\t"))
-      .filter(_.length == 2)
+      .filter(_.length == 3)
       .map(x => {
         val user = x(0)
-        val birthday = x(1)
+        val gender = x(1)
+        val birthday = x(2)
         val pattern = "([0-9]+)-([0-9][0-9])-([0-9][0-9])".r
         val age = birthday match {
           case pattern(birthdayYear, birthdayMonth, birthdayDay) => {
@@ -126,20 +119,11 @@ object StepReport {
           }
           case _ => 0
         }
-        (user, age.toString)
-      })
-
-    val userInfo = userGender.union(userAge)
-      .groupByKey()
-      .map(x => {
-        val user = x._1
-        val info = x._2.toSeq.sortWith(_ < _).foldLeft("")((acc, value) => {
-            if (value.equals("x") || value.equals("default") || value.equals("0")) {
-              "default"
-            } else {
-              acc + ";" + value
-            }})
-        (user, info)
+        if (gender == "x" || age == 0) {
+          (user, "default")
+        } else {
+          (user, gender + ";" + age.toString)
+        }
       })
 
     def knuthShuffle[T](x: Array[T]) = {
@@ -184,6 +168,6 @@ object StepReport {
         }
       }
       (user, (info, (index.toDouble * 100 / size).formatted("%.1f") + "%"))
-    }}).saveAsTextFile(args(7))
+    }}).saveAsTextFile(args(5))
   }
 }
