@@ -15,4 +15,12 @@ object TimeIssues {
     calendar.add(Calendar.DATE, -n)
     dateFormat.parse(dateFormat.format(calendar.getTime)).getTime / 1000
   }
+
+  def nDaysAgoDate(n: Int) = {
+    val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.DATE, -n)
+    dateFormat.format(calendar.getTime)
+  }
+
 }
