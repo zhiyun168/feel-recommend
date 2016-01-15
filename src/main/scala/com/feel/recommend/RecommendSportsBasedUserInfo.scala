@@ -22,13 +22,13 @@ object RecommendSportsBasedUserInfo {
     // 011, f, fat, goodSleep
     Set("羽毛球", "慢走", "瑜伽", "慢走", "慢跑", "骑行"),
     // 100, m, notFat, badSleep
-    Set("滑冰", "看菠萝直播", "健身"),
+    Set("滑冰", "健身"),
     // 101, f, notFat, badSleep
     Set("滑冰", "健美操", "瑜伽", "跳舞", "滑雪", "健身"),
     // 110, m, fat, badSleep
-    Set("看菠萝直播", "健身"),
+    Set("健身"),
     // 111, f, fat, badSleep
-    Set("看菠萝直播", "瑜伽", "健身"))
+    Set("瑜伽", "健身"))
 
   private val ALL_SET = Set("乒乓球", "高尔夫", "踢毽子", "台球", "太极", "慢走", "广播体操")
 
@@ -55,7 +55,7 @@ object RecommendSportsBasedUserInfo {
           val ts = bodyInfo.get("created").toString.toLong
           (fatInfo, ts)
         } catch {
-          case _ => (Double.MinValue, -1L)
+          case _: Throwable => (Double.MinValue, -1L)
         }
         (user, fatInfo)
       }).filter(_._2._1 != Double.MinValue)
@@ -80,7 +80,7 @@ object RecommendSportsBasedUserInfo {
         val ts = miBandInfo.get("created").toString.toLong
         (shallowSleepTime, deepSleepTime, ts)
       } catch {
-        case _ => (-1D, -1D, -1L)
+        case _: Throwable => (-1D, -1D, -1L)
       }
       (user, sleepInfo)
     }).filter(_._1 != -1)
