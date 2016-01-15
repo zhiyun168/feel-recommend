@@ -29,7 +29,7 @@ object CaloryReport {
         (goalType == "6" && ts >= startTime && ts < endTime)
       }).map(x => {
       val user = x._2.get("uid").toString
-      val runCalories = x._2.get("info").toString.asInstanceOf[BSONObject].get("calorie").toString.toDouble
+      val runCalories = x._2.get("info").asInstanceOf[BSONObject].get("calorie").toString.toDouble
       (user, runCalories)
     })
 
