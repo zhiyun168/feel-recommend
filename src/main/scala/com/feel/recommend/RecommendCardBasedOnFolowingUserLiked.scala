@@ -58,6 +58,11 @@ object RecommendCardBasedOnFollowingUserLiked {
       .map(x => (x._2._1, (x._1, x._2._1))) //user, likedCard
       .groupByKey()
 
+    val recentlyActiveUser = sc.textFile(args(8))
+      .map(_.split("\t"))
+      .filter(_.length == 2)
+      .map(x => (x(0), x(1)))
+
     val followingLikedCard = sc.textFile(args(1))
       .map(_.split("\t"))
       .filter(_.length == 2)
@@ -65,6 +70,8 @@ object RecommendCardBasedOnFollowingUserLiked {
       .map(x => (x(0), x(1))) // following, user
       .join(userLikedCard) // following, user, liked card
       .map(x => (x._2._1, x._2._2)) // user, {(recommended card, whoLiked)}
+      .join(recentlyActiveUser)
+      .map(x => (x._1, x._2._1))
       .groupByKey()
       .leftOuterJoin(userLikedCard) // user, {{(recommended card, whoLiked)}}, (userLikedCard, whoLiked)
       .flatMap(x => {
