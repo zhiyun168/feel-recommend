@@ -63,6 +63,8 @@ object StepReport {
     }).filter(_._2 != 0)
       .reduceByKey((a, b) => a + b)
 
+    userStepNumber.map(x => x._1 + "\t" + "total_step:" + x._2.toString).saveAsTextFile(args(6))
+
     val userFollowing = sc.textFile(args(2))
       .map(_.split("\t"))
       .filter(_.length == 2) //leader, follower
@@ -94,7 +96,7 @@ object StepReport {
         }
       }
       val rank = min(index + 1, rankedStepNumber.length)
-      (user, rank)
+      user + "\tranking_in_following:" + rank.toString
     }
     })
     rankInFollowingUserStep.saveAsTextFile(args(3))
@@ -167,7 +169,7 @@ object StepReport {
           left = middle + 1
         }
       }
-      (user, (info, (100 - index.toDouble * 100 / size).formatted("%.1f") + "%"))
+      user + "\t" + "user_step_rank_ratio:" + info + "," + (100 - index.toDouble * 100 / size).formatted("%.1f") + "%"
     }}).saveAsTextFile(args(5))
   }
 }
