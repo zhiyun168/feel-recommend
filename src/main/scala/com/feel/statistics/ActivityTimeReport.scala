@@ -54,6 +54,6 @@ object ActivityTimeReport {
     }).filter(_._2 != 0D)
       .reduceByKey((a, b) => a + b)
 
-    userDistance.saveAsTextFile(args(2))
+    userDistance.map(x => x._1 + "\tactivity_time:" + x._2.toString).saveAsTextFile(args(2))
   }
 }
