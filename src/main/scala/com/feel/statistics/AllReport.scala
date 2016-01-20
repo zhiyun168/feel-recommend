@@ -2,6 +2,9 @@ package com.feel.statistics
 
 import org.apache.spark.SparkContext
 
+import org.codehaus.jettison.json.JSONObject
+
+
 /**
   * Created by canoe on 1/20/16.
   */
@@ -15,7 +18,13 @@ object AllReport {
           .filter(_.length == 2)
           .map(x => (x(0), x(1)))
           .groupByKey()
-          .map(x => "uid:" + x._1 + ";" + x._2.toSeq.mkString(","))
+          .map(x => {
+            val report = new JSONObject()
+            x._2.foldLeft(report.put("uid", x._1))((acc, value) => {
+              val tmp = value.split(":")
+              acc.put(tmp(0), tmp(1))
+            })
+          })
           .saveAsTextFile(args(1))
   }
 }
