@@ -69,7 +69,11 @@ object CaloryReport {
     }})
 
 
-    userRunCalories.union(userStepCalories).reduceByKey((a, b) => a + b).saveAsTextFile(args(2))
+    userRunCalories.union(userStepCalories).reduceByKey((a, b) => a + b)
+      .map(x => {
+        x._1 + "\tuser_calories:" + x._2.formatted("%.2f")
+      })
+      .saveAsTextFile(args(2))
 
   }
 }
