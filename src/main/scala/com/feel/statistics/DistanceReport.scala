@@ -56,7 +56,7 @@ object DistanceReport {
       .map(x => {
         val user = x._1
         val stepNumber = (x._2 / 1000.0).formatted("%.2f")
-        (user, stepNumber)
+        user + "user_distance:" + stepNumber.toString
       })
     userDistance.saveAsTextFile(args(2))
   }
