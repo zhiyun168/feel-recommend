@@ -20,6 +20,7 @@ object AllReport {
           .groupByKey()
           .map(x => {
             val report = new JSONObject()
+            report.put("updated", System.currentTimeMillis() / 1000)
             x._2.foldLeft(report.put("uid", x._1))((acc, value) => {
               val tmp = value.split(":")
               acc.put(tmp(0), tmp(1))
