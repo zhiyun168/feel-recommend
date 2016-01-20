@@ -54,7 +54,7 @@ object WeeklyDayStepTrend {
       .groupByKey()
       .map({case (user, dailyStepList) => {
         val stepList = dailyStepList.toList.sortWith(_._1 < _._1)
-        user + "\tstep_trend:" + stepList.sortWith(_._2 < _._2)W  .mkString(",")
+        user + "\tstep_trend:" + stepList.sortWith(_._2 < _._2).mkString(",")
       }})
 
     userStepNumber.saveAsTextFile(args(2))
