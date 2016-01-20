@@ -12,6 +12,7 @@ object AllReport {
 
     val data = sc.textFile(args(0))
       data.map(_.split("\t"))
+          .filter(_.length == 2)
           .map(x => (x(0), x(1)))
           .groupByKey()
           .map(x => "uid:" + x._1 + ";" + x._2.toSeq.mkString(","))
