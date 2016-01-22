@@ -86,7 +86,7 @@ object HeartRatioReport {
       .flatMap(x => {
         val infoUserHeartRatioMean = x._2.foldLeft(0D)((acc, value) => acc + value._2) / x._2.size
         x._2.map({ case (user, heartRatio) =>
-          user + "\tuser_heart_ratio_gap:" + x._1 + "," + (heartRatio - infoUserHeartRatioMean).formatted("%.2f")
+          user + "\tinfo_user_heart_ratio_mean:" + x._1 + "," + infoUserHeartRatioMean.formatted("%.2f")
         })
       })
     infoUserHeartRatioDiff.saveAsTextFile(args(4))
