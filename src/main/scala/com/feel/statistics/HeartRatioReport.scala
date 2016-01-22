@@ -48,7 +48,7 @@ object HeartRatioReport {
 
     userHeartRatio.map(x => {
       val user = x._1
-      user + "\tuser_heart_ratio:" + x._2._1.toString + "," + x._2._2.toString + "," + x._2._3.toString
+      user + "\tuser_heart_ratio:" + x._2._1.toString + "," + x._2._2.toString + "," + x._2._3.formatted("%.2f")
     }).saveAsTextFile(args(2))
 
 
