@@ -50,14 +50,22 @@ object DistanceReport {
       } else {
         0L
       }
-      (user, distanceNumber)
-    }).filter(_._2 != 0L)
+      (user, (distanceNumber, ts))
+    }).filter(_._2._1 != 0L)
+
+    userDistance.map(x => (x._1, x._2._1))
       .reduceByKey((a, b) => a + b)
       .map(x => {
         val user = x._1
         val stepNumber = (x._2 / 1000.0).formatted("%.2f")
         user + "\tuser_distance:" + stepNumber.toString
-      })
-    userDistance.saveAsTextFile(args(2))
+      }).saveAsTextFile(args(2))
+
+    userDistance.groupByKey()
+      .map(x => {
+        val user = x._1
+        val maxDistanceDay = x._2.maxBy(y => y._1)
+        user + "\tuser_daily_max_distance:" + (maxDistanceDay._1 / 1000.0).formatted("%.2f") + "," + maxDistanceDay._2.toString
+      }).saveAsTextFile(args(3))
   }
 }
