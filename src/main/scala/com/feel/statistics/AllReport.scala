@@ -1,5 +1,6 @@
 package com.feel.statistics
 
+import com.feel.utils.TimeIssues
 import org.apache.spark.SparkContext
 
 import org.codehaus.jettison.json.JSONObject
@@ -21,6 +22,7 @@ object AllReport {
           .map(x => {
             val report = new JSONObject()
             report.put("updated", System.currentTimeMillis() / 1000)
+            report.put("report_date", TimeIssues.nDaysAgoDate(-8) + ";" + TimeIssues.nDaysAgoDate(-1))
             x._2.foldLeft(report.put("uid", x._1))((acc, value) => {
               val tmp = value.split(":")
               acc.put(tmp(0), tmp(1))
