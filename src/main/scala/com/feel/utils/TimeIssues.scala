@@ -23,4 +23,8 @@ object TimeIssues {
     dateFormat.format(calendar.getTime)
   }
 
+  def tsToDate(ts: Long) = {
+    val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
+    dateFormat.format(ts)
+  }
 }

@@ -34,3 +34,15 @@ case class FeelUserRDD(rdd: RDD[String], schema: List[String], userIndex: Int)
     .filter(_(userIndex).toInt > REAL_USER_ID_BOUND_)
 }
 
+class FeelUserAggregatedRDD(rdd: RDD[String], schema: List[String], userIndex: Int, featureIndex: Int,
+                            aggregateFunc: String => Int)
+  extends FeelUserRDD(rdd: RDD[String], schema: List[String], userIndex: Int) {
+
+  def countUserInfo() = {
+    transform().map(x => (x(0), aggregateFunc(x(featureIndex))))
+      .distinct()
+      .reduceByKey((a, b) => a + b)
+      .sortBy(_._2)
+  }
+
+}
