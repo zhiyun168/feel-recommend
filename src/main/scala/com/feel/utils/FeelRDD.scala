@@ -40,7 +40,6 @@ class FeelUserAggregatedRDD(rdd: RDD[String], schema: List[String], userIndex: I
 
   def countUserInfo() = {
     transform().map(x => (x(0), aggregateFunc(x(featureIndex))))
-      .distinct()
       .reduceByKey((a, b) => a + b)
       .sortBy(_._2)
   }
