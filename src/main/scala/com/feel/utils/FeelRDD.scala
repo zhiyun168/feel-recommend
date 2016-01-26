@@ -1,11 +1,14 @@
 package com.feel.utils
 
+import org.apache.hadoop.conf.Configuration
+import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
+import org.bson.BSONObject
 
 /**
   * Created by canoe on 1/23/16.
   */
-abstract class FeelRDD(rdd: RDD[String], schema: List[String]) extends Serializable{
+abstract class FeelRDD(rdd: RDD[String], schema: List[String]) extends Serializable {
   private val schema_ = schema
   private val rdd_ = rdd
 
@@ -45,5 +48,43 @@ class FeelUserAggregatedRDD(rdd: RDD[String], schema: List[String], userIndex: I
       .reduceByKey((a, b) => a + b)
       .sortBy(_._2)
   }
+}
 
+class FeelUserHardWareRDD(rdd: RDD[(Object, BSONObject)], goalType: String,
+                           timeRange: (Long, Long), dataSchema: String) extends Serializable {
+
+  private val (startTime_, endTime_) = timeRange
+  private val goalType_ = goalType
+  private val rdd_ = rdd
+  private val dataSchema_ = dataSchema
+
+  def transform(): RDD[(String, Double, Long)] =  {
+    rdd_.filter(x => {
+      val ts = x._2.get("record_time").toString.toLong / 1000
+      val goalType = x._2.get("goal_type").toString
+      goalType == goalType_ && ts >= startTime_ && ts < endTime_
+    }).map(x => {
+      try {
+        val user = x._2.get("uid").toString
+        val value = x._2.get("info").asInstanceOf[BSONObject].get(dataSchema_).toString.toDouble
+        val ts = x._2.get("record_time").toString.toLong / 1000
+        (user, value, ts)
+      } catch {
+        case _: Throwable => ("", 0D, 0L)
+      }
+    }).filter(_._2 != 0D)
+  }
+}
+
+class MongoReader(authUri: String, inputUri: String) {
+
+  def initRDD(): RDD[(Object, BSONObject)] = {
+    val sc = new SparkContext()
+
+    val hadoopConf = new Configuration()
+    hadoopConf.set("mongo.auth.uri", authUri)
+    hadoopConf.set("mongo.input.uri", inputUri)
+    sc.newAPIHadoopRDD(hadoopConf, classOf[com.mongodb.hadoop.MongoInputFormat], classOf[Object],
+      classOf[BSONObject])
+  }
 }
