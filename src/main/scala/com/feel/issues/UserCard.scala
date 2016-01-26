@@ -14,7 +14,8 @@ object UserCard {
     val sc = new SparkContext()
 
     def f(x: String) = 1
-    val rdd = new FeelUserAggregatedRDD(sc.textFile(args(0)), List("user", "card"), 0, 1, f)
+    val rdd = new FeelUserAggregatedRDD(sc.textFile(args(0)), List("user", "card", "type", "isDeleted", "ts"),
+      0, 1, f, 1420041600, 4)
     rdd.countUserInfo().saveAsTextFile(args(1))
 
   }
