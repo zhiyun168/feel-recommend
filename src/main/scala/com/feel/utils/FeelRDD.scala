@@ -35,11 +35,13 @@ case class FeelUserRDD(rdd: RDD[String], schema: List[String], userIndex: Int)
 }
 
 class FeelUserAggregatedRDD(rdd: RDD[String], schema: List[String], userIndex: Int, featureIndex: Int,
-                            aggregateFunc: String => Int)
+                            aggregateFunc: String => Int, ts: Long, tsIndex: Int)
   extends FeelUserRDD(rdd: RDD[String], schema: List[String], userIndex: Int) {
 
   def countUserInfo() = {
-    transform().map(x => (x(0), aggregateFunc(x(featureIndex))))
+    transform()
+      .filter(x => x(tsIndex).toLong > ts)
+      .map(x => (x(0), aggregateFunc(x(featureIndex))))
       .reduceByKey((a, b) => a + b)
       .sortBy(_._2)
   }
