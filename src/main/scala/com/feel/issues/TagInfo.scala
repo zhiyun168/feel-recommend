@@ -14,7 +14,7 @@ object TagInfo {
   private val dateBegin = List ("03-21", "04-20", "05-21", "06-22", "07-23",
     "08-23", "09-23", "10-24", "11-23", "12-22", "01-20", "02-19")
   private val dateEnd = List ("04-19", "05-20", "06-21", "07-22", "08-22",
-    "09-22", "10-23", "11-22", "12-21", "01-19", "02-18", "03-20")
+    "09-22", "10-23", "11-22", "12-21", "13-19", "02-18", "03-20")
   private val starBin = List("白羊座", "金牛座", "双子座", "巨蟹座", "狮子座", "处女座",
     "天秤座", "天蝎座", "射手座", "摩羯座", "水瓶座", "双鱼座")
 
@@ -77,8 +77,8 @@ object TagInfo {
         }
         List(((ageToBin(age), brand), 1), ((gender, brand), 1), ((birthdayToBin(birthday), brand), 1))
       }).reduceByKey((a, b) => a + b)
-    .saveAsTextFile(args(2))
-
+      .map(x => (x._1._1, (x._1._2, x._2)))
+      .reduceByKey((a, b) => if (a._2 > b._2) a else b)
+      .saveAsTextFile(args(2))
   }
-
 }
