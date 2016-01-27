@@ -48,7 +48,7 @@ object HeartRatioReport {
 
     userHeartRatio.map(x => {
       val user = x._1
-      user + "\tuser_heart_ratio:" + x._2._1.toString + "," + x._2._2.toString + "," + x._2._3.formatted("%.2f")
+      user + "\tuser_heart_ratio: [" + x._2._1.toString + "," + x._2._2.toString + "," + x._2._3.formatted("%.2f") + "]"
     }).saveAsTextFile(args(2))
 
 
@@ -75,7 +75,7 @@ object HeartRatioReport {
         if (gender == "x" || age == 0) {
           (user, "default")
         } else {
-          (user, gender + ";" + age.toString)
+          (user, gender + "," + age.toString)
         }
       })
     val infoUserHeartRatioDiff = userHeartRatio.map(x => (x._1, x._2._3))
@@ -86,7 +86,7 @@ object HeartRatioReport {
       .flatMap(x => {
         val infoUserHeartRatioMean = x._2.foldLeft(0D)((acc, value) => acc + value._2) / x._2.size
         x._2.map({ case (user, heartRatio) =>
-          user + "\tinfo_user_heart_ratio_mean:" + x._1 + "," + infoUserHeartRatioMean.formatted("%.2f")
+          user + "\tinfo_user_heart_ratio_mean: [" + x._1 + "," + infoUserHeartRatioMean.formatted("%.2f") + "]"
         })
       })
     infoUserHeartRatioDiff.saveAsTextFile(args(4))
