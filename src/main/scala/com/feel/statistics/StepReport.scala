@@ -124,7 +124,7 @@ object StepReport {
         if (gender == "x" || age == 0) {
           (user, "default")
         } else {
-          (user, gender + ";" + age.toString)
+          (user, gender + "," + age.toString)
         }
       })
 
@@ -169,7 +169,8 @@ object StepReport {
           left = middle + 1
         }
       }
-      user + "\t" + "user_step_rank_ratio:" + info + "," + (100 - index.toDouble * 100 / size).formatted("%.1f") + "%"
+      user + "\t" + "user_step_rank_ratio: [" + info + "," +
+        (100 - index.toDouble * 100 / size).formatted("%.1f") + "%]"
     }}).saveAsTextFile(args(5))
   }
 }
