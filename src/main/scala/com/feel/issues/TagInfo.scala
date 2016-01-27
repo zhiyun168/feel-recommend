@@ -78,7 +78,12 @@ object TagInfo {
         List(((ageToBin(age), brand), 1), ((gender, brand), 1), ((birthdayToBin(birthday), brand), 1))
       }).reduceByKey((a, b) => a + b)
       .map(x => (x._1._1, (x._1._2, x._2)))
-      .reduceByKey((a, b) => if (a._2 > b._2) a else b)
+      .groupByKey()
+      .map(x => {
+        val user = x._1
+        val value = x._2.toSeq.sortWith(_._2 > _._2).take(5)
+        (user, value.mkString(","))
+      })
       .saveAsTextFile(args(2))
   }
 }
