@@ -8,15 +8,16 @@ import java.util.{TimeZone, Calendar}
   */
 object TimeIssues {
 
-  TimeZone.setDefault(TimeZone.getTimeZone("GMT+8"))
-  def nDaysAgoTs(n: Int) = {
-    val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
+ def nDaysAgoTs(n: Int) = {
+   TimeZone.setDefault(TimeZone.getTimeZone("GMT+8"))
+   val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
     val calendar = Calendar.getInstance()
     calendar.add(Calendar.DATE, -n)
     dateFormat.parse(dateFormat.format(calendar.getTime)).getTime / 1000
   }
 
   def nDaysAgoDate(n: Int) = {
+    TimeZone.setDefault(TimeZone.getTimeZone("GMT+8"))
     val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
     val calendar = Calendar.getInstance()
     calendar.add(Calendar.DATE, -n)
