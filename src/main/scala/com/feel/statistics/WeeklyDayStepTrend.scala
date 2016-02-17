@@ -19,8 +19,8 @@ object WeeklyDayStepTrend {
     val mongoRDD = sc.newAPIHadoopRDD(hadoopConf, classOf[com.mongodb.hadoop.MongoInputFormat], classOf[Object],
       classOf[BSONObject])
 
-    val startTime = TimeIssues.nDaysAgoTs(7)
-    val endTime = TimeIssues.nDaysAgoTs(0)
+    val startTime = TimeIssues.nDaysAgoTs(args(3).toInt)
+    val endTime = TimeIssues.nDaysAgoTs(args(4).toInt)
 
     val userStepNumber = mongoRDD.map(x => {
       val user = x._2.get("uid").toString
