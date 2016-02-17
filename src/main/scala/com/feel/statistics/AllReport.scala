@@ -40,7 +40,7 @@ object AllReport {
           .map(x => {
             val report = new mutable.HashMap[String, Any]
             report.put("updated", System.currentTimeMillis() / 1000)
-            report.put("report_date", List(TimeIssues.nDaysAgoDate(8), TimeIssues.nDaysAgoDate(1)))
+            report.put("report_date", List(TimeIssues.nDaysAgoDate(args(2).toInt), TimeIssues.nDaysAgoDate(args(3).toInt)))
             report.put("uid", x._1)
             val allReport = x._2.foldLeft(report)((acc, value) => {
               val tmp = value.split(":")
