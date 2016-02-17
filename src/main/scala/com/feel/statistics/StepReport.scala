@@ -115,7 +115,7 @@ object StepReport {
             val yearDiff = today.substring(0, 4).toInt - birthdayYear.toInt
             val delta = {
               if (today.substring(5, 10) > birthdayMonth + "-" + birthdayDay) 1
-              else 0
+              else -1
             }
             if (yearDiff > 100 || yearDiff < 3) 0 else yearDiff + delta
           }
