@@ -22,8 +22,8 @@ object HeartRatioReport {
     val mongoRDD = sc.newAPIHadoopRDD(hadoopConf, classOf[com.mongodb.hadoop.MongoInputFormat], classOf[Object],
       classOf[BSONObject])
 
-    val startTime = TimeIssues.nDaysAgoTs(7)
-    val endTime = TimeIssues.nDaysAgoTs(0)
+    val startTime = TimeIssues.nDaysAgoTs(args(5).toInt)
+    val endTime = TimeIssues.nDaysAgoTs(args(6).toInt)
 
     val userHeartRatio = mongoRDD.filter(x => {
       val ts = x._2.get("record_time").toString.toLong / 1000
