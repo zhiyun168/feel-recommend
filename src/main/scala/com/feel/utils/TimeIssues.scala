@@ -25,7 +25,16 @@ object TimeIssues {
   }
 
   def tsToDate(ts: Long) = {
+    TimeZone.setDefault(TimeZone.getTimeZone("GMT+8"))
     val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
     dateFormat.format(ts)
+  }
+
+  def getTsHour(ts: Long) = {
+    TimeZone.setDefault(TimeZone.getTimeZone("GMT+8"))
+    val calendar = Calendar.getInstance()
+    calendar.setTimeZone(TimeZone.getDefault())
+    calendar.setTimeInMillis(ts * 1000)
+    calendar.get(Calendar.HOUR_OF_DAY)
   }
 }
