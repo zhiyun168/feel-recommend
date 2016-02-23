@@ -67,7 +67,7 @@
 ##周报
 ### 全部报告汇总
 
-* 全部报告写成Json[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/statistics/AllReport.scala) 
+* 全部报告写成Json。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/statistics/AllReport.scala) 
 * 部署目录`hadoop@172.31.1.109` `/usr/local/etc/deploy/report/allReport`
 
 ### 活跃时长
@@ -85,3 +85,21 @@
 ### 每周步数趋势
 * 用户每周每日的步数运动情况。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/statistics/WeeklyDayStepTrend.scala)
 
+##健康中心
+### 推荐每日每小时步数
+* 根据历史各个小时步数运动情况推荐每日每小时运动步数。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RecommendPlanForStepTarget.scala)
+
+### 推荐每日运动类型
+* 根据最近的心率，睡眠质量，性别，肥胖程度推荐用户每日的运动类型。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RecommendSportsBasedUserInfo.scala)
+
+##定时数据任务
+* 分享报告。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/statistics/ShareInfo.scala)
+* 留存报告。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/statistics/NextDayRetention.scala)
+* iOS新增渠道报告。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/statistics/ChannelIOSDataInfo.scala)
+* 新增用户报告。 [代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/statistics/NewUserMetric.scala)
+
+##其他尝试
+* 标签类型分类。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/ClassifyTag.scala)
+* 用户类型（标签）分类。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/ClassifyUserType.scala)
+* 用户登录时间分类。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/statistics/UserLogInTimeAnalysis.scala)
+* 用户步行时间类型分裂。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/statistics/StepGame.scala)
