@@ -64,5 +64,24 @@
 ##推荐标签
 * 最近最常使用标签。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RecentlyMostlyUsedTag.scala)
 
+##周报
+### 全部报告汇总
 
+* 全部报告写成Json[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/statistics/AllReport.scala) 
+* 部署目录`hadoop@172.31.1.109` `/usr/local/etc/deploy/report/allReport`
+
+### 活跃时长
+* 用户每周看视频，做Plank，记步，跑步等总时长。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/statistics/ActivityTimeReport.scala)
+
+### 运动距离
+* 用户每周距离跑步。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/statistics/DistanceReport.scala)
+
+### 心率汇总
+* 用户本周心率报告，同龄人心率报告。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/statistics/HeartRatioReport.scala)
+
+### 步数汇总
+* 用户本周步数汇总，同龄人步数情况。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/statistics/StepReport.scala) 
+
+### 每周步数趋势
+* 用户每周每日的步数运动情况。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/statistics/WeeklyDayStepTrend.scala)
 
