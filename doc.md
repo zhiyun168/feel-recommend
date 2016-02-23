@@ -116,3 +116,7 @@
 * 用户类型（标签）分类。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/ClassifyUserType.scala)
 * 用户登录时间分类。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/statistics/UserLogInTimeAnalysis.scala)
 * 用户步行时间类型分类。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/statistics/StepGame.scala)
+
+##热门候选库
+* 按照粉丝数（0-100， 100-500， 500+）进行热门分层提供候选集。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RecommendHotCardBasedOnKLDivergence.scala)
+* 部署目录 `ubuntu@172.31.4.142` `/home/ubuntu/deploy-test/recommend_hot_card`
