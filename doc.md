@@ -15,34 +15,54 @@
 * 按照已经关注的用户的平均特征相似程度排序。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RankRecommendedUser.scala)
  
 ### 任务提交
-* 部署目录  
-
-`hadoop@172.31.1.109``/usr/local/etc/deploy/recommend_user/run`
+* 部署目录  `hadoop@172.31.1.109``/usr/local/etc/deploy/recommend_user/run`
+* 对应线上首页流用户推荐
 
 ##打卡推荐
 ###根据性别推荐
 * 根据加入打卡的用户的性别进行打卡分类（分为男女喜欢类打卡），然后根据男女性别进行打卡推荐。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RecommendGoalBasedOnGender.scala)
-* 部署目录
-`hadoop@172.31.1.109``/usr/local/etc/deploy/recommend_user/run`
+* 部署目录`hadoop@172.31.1.109``/usr/local/etc/deploy/goal_recommend_based_on_gender/run`
+* 对应线上打卡推荐
 
 ###根据已经加入打卡推荐（协同）
-根据和用户在打卡加入上类似的用户加入的打卡进行推荐。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RecommendGoalBaseOnSameGoalJoinedUser.scala)
+* 根据和用户在打卡加入上类似的用户加入的打卡进行推荐。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RecommendGoalBaseOnSameGoalJoinedUser.scala)
+* 部署目录`hadoop@172.31.1.109``/usr/local/etc/deploy/goal_common_user_goal/run`
+* 对应线上打卡推荐
+
 
 ##推荐卡片
 ###关注用户点赞的卡片
-关注的用户点过的赞的卡片进行排序推荐。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RecommendCardBasedOnFolowingUserLiked.scala)
+* 关注的用户点过的赞的卡片进行排序推荐。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RecommendCardBasedOnFolowingUserLiked.scala)
+* 部署目录 `hadoop@172.31.1.109``/usr/local/etc/deploy/card_recommend_based_on_following_user_liked_with_detail/run`
+* 对应线上发现页关注的用户赞过
+
 ###加入同样打卡用户卡片
-加入同样打卡的用户的卡片进行排序推荐。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RecommendCardBasedOnGoalJoined.scala)
+* 加入同样打卡的用户的卡片进行排序推荐。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RecommendCardBasedOnGoalJoined.scala)
+* 部署目录 `hadoop@172.31.1.109``/usr/local/etc/deploy/card_recommend_based_on_goal_with_detail/run`
+* 对应线上加入同样打卡的用户的卡片
+
 ###十公里内卡片
-用户GPS距离十公里内卡片进行排序推荐。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RecommendCardBasedOnNearbyHot.scala)
+* 用户GPS距离十公里内卡片进行排序推荐。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RecommendCardBasedOnNearbyHot.scala)
+* 部署目录 `hadoop@172.31.1.109``/usr/local/etc/deploy/recommendNearbyHotCard/run`
+* 对应线上十公里内卡片
+
 ###相似用户卡片
-相似用户（共同粉丝数多）的卡片进行推荐。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RecommendCardForSimilarUser.scala)
+* 相似用户（共同粉丝数多）的卡片进行推荐。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RecommendSimilarUser.scala) [代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RecommendCardForSimilarUser.scala)
+* 部署目录 `hadoop@172.31.1.109``/usr/local/etc/deploy/similar_user_card_with_detail/run`
+* 对应详情页共同粉丝数用户卡片
+
 ###相似标签卡片
-相似标签的最热卡片进行推荐。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RecommendCardForSimilarTag.scala)
+* 用户标签的共现，Jacarrd相似度，编辑距离三项作为相似度量，取三者平均进行加权，距离越小越相似。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RecommendSimilarTag.scala)
+* 相似标签的最热卡片进行推荐。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RecommendCardForSimilarTag.scala)
+*  部署目录 `hadoop@172.31.1.109``/usr/local/etc/deploy/similar_tag_card_with_detail/run`
+*  对应详情页相似标签最热卡片
+
 ###性别历史热门卡片
-按照用户性格进行热门卡片分类，推荐给新用户。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RecommendHistoryHotContextBasedOnGender.scala)
+* 按照用户性格进行热门卡片分类，推荐给新用户。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RecommendHistoryHotContextBasedOnGender.scala)
+* 部署目录 `hadoop@172.31.1.109``/usr/local/etc/deploy/gender_history_hot_card/run`
+
 ##推荐标签
-用户标签的共现，Jacarrd相似度，编辑距离三项作为相似度量，取三者平均进行加权，距离越小越相似。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RecentlyMostlyUsedTag.scala)
+* 最近最常使用标签。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RecentlyMostlyUsedTag.scala)
 
 
 
