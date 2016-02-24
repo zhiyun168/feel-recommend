@@ -151,6 +151,7 @@ object StepReport {
         }
         (key, stepArray)
       })
+    specifiedUserStepArray.saveAsTextFile(args(9))
 
     userInfo.join(userStepNumber)
       .map(x => (x._2._1, (x._1, x._2._2))) //(info, (user, stepNumber))
@@ -171,7 +172,7 @@ object StepReport {
         }
       }
       user + "\t" + "user_step_rank_ratio: [" + info + "," +
-        (100 - index.toDouble * 100 / size).formatted("%.1f") + "%]"
+        (index.toDouble * 100 / size).formatted("%.1f") + "%]"
     }}).saveAsTextFile(args(5))
   }
 }
