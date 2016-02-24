@@ -151,7 +151,6 @@ object StepReport {
         }
         (key, stepArray)
       })
-    specifiedUserStepArray.saveAsTextFile(args(9))
 
     userInfo.join(userStepNumber)
       .map(x => (x._2._1, (x._1, x._2._2))) //(info, (user, stepNumber))
