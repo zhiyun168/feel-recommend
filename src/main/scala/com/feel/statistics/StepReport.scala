@@ -106,7 +106,7 @@ object StepReport {
       .filter(_.length == 3)
       .map(x => {
         val user = x(0)
-        val gender = x(1)
+        /*val gender = x(1)
         val birthday = x(2)
         val pattern = "([0-9]+)-([0-9][0-9])-([0-9][0-9])".r
         val age = birthday match {
@@ -125,7 +125,8 @@ object StepReport {
           (user, "default")
         } else {
           (user, gender + "," + age.toString)
-        }
+        }*/
+        (user, "default")
       })
 
     def knuthShuffle[T](x: Array[T]) = {
