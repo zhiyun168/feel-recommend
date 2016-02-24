@@ -171,7 +171,7 @@ object StepReport {
         }
       }
       user + "\t" + "user_step_rank_ratio: [" + info + "," +
-        (100 - index.toDouble * 100 / size).formatted("%.1f") + "%]"
+        (index.toDouble * 100 / size).formatted("%.1f") + "%]"
     }}).saveAsTextFile(args(5))
   }
 }
