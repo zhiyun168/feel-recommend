@@ -8,6 +8,8 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.spark.SparkContext
 import org.bson.BSONObject
 
+import scala.util.Random._
+
 /**
   * Created by canoe on 1/21/16.
   */
@@ -57,7 +59,7 @@ object HeartRatioReport {
       .filter(_.length == 3)
       .map(x => {
         val user = x(0)
-        val gender = x(1)
+        /*val gender = x(1)
         val birthday = x(2)
         val pattern = "([0-9]+)-([0-9][0-9])-([0-9][0-9])".r
         val age = birthday match {
@@ -76,15 +78,28 @@ object HeartRatioReport {
           (user, "default")
         } else {
           (user, gender + "," + age.toString)
-        }
+        }*/
+        (user, "default")
       })
+
+    def knuthShuffle[T](x: Array[T]) = {
+      for (i <- (1 until x.length).reverse) {
+        val j = nextInt(i + 1)
+        val tmp = x(j)
+        x(j) = x(i)
+        x(i) = tmp
+      }
+      x
+    }
+
     val infoUserHeartRatioDiff = userHeartRatio.map(x => (x._1, x._2._3))
       .join(userInfo)
       .map({ case (user, (heartRatio, info)) =>
         (info, (user, heartRatio))
       }).groupByKey()
       .flatMap(x => {
-        val infoUserHeartRatioMean = x._2.foldLeft(0D)((acc, value) => acc + value._2) / x._2.size
+        val infoUserHeartRatioMean = knuthShuffle(x._2.map(_._2).toArray)
+          .foldLeft(0D)((acc, value) => acc + value) / x._2.size
         x._2.map({ case (user, heartRatio) =>
           user + "\tinfo_user_heart_ratio_mean: [" + x._1 + "," + infoUserHeartRatioMean.formatted("%.2f") + "]"
         })
