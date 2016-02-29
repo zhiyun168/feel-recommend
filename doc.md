@@ -93,6 +93,7 @@
 ### 推荐每日运动类型
 * 根据最近的心率，睡眠质量，性别，肥胖程度推荐用户每日的运动类型。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RecommendSportsBasedUserInfo.scala)
 * 部署目录 `hadoop@172.31.1.109` `/usr/local/etc/deploy/sports/`
+* 每周跑完应该再部署目录里`cat result`文件看一下自己的数据有没有问题再执行`bash post.sh`写到线上。
 
 ##定时数据任务
 ### 分享报告
