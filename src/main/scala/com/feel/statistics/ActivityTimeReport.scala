@@ -25,33 +25,17 @@ object ActivityTimeReport {
     val userDistance = mongoRDD.filter(x => {
       val goalType = x._2.get("goal_type").toString
       val ts = x._2.get("record_time").toString.toLong / 1000
-      ts >= startTime && ts < endTime && (goalType == "2" || goalType == "3" || goalType == "6" || goalType == "11")
+      ts >= startTime && ts < endTime && goalType == "13"
     }).map(x => {
       val data = try {
         val user = x._2.get("uid").toString
-        val goalType = x._2.get("goal_type").toString
-
-        val activityTime = goalType match {
-          case "2" =>
-            x._2.get("info").asInstanceOf[BSONObject].get("total_duration").toString.toDouble
-          case "3" =>
-            val deviceType = x._2.get("device").toString
-            val info = x._2.get("info").asInstanceOf[BSONObject]
-            deviceType match {
-              case "mi_band" => info.get("wakeTime").toString.toDouble
-              case "pedometer" => info.get("activityTime").toString.toDouble
-              case _ => 0D
-            }
-          case "6" => x._2.get("info").asInstanceOf[BSONObject].get("duration").toString.toDouble / 1000
-          case "11" => x._2.get("info").asInstanceOf[BSONObject].get("duration").toString.toDouble / 1000
-          case _ => 0D
-        }
+        val activityTime = x._2.get("sum").asInstanceOf[BSONObject].get("duration").toString.toLong
         (user, activityTime)
       } catch {
-        case _: Throwable => ("", 0D)
+        case _: Throwable => ("", 0L)
       }
       data
-    }).filter(_._2 != 0D)
+    }).filter(_._2 != 0L)
       .reduceByKey((a, b) => a + b)
 
     userDistance.map(x => x._1 + "\tactivity_time:" + x._2.toString).saveAsTextFile(args(2))
