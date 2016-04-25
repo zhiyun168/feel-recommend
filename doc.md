@@ -120,3 +120,9 @@
 ##热门候选库
 * 按照粉丝数（0-100， 100-500， 500+）进行热门分层提供候选集。[代码](https://github.com/zhiyun168/feel-recommend/blob/master/src/main/scala/com/feel/recommend/RecommendHotCardBasedOnKLDivergence.scala)
 * 部署目录 `ubuntu@172.31.4.142` `/home/ubuntu/deploy-test/recommend_hot_card`
+
+
+##查看Hadoop
+* ssh -i ~/dev/zhiyun_aws-key-pair-beijing.pem -ND 8157 hadoop@ec2-54-223-54-65.cn-north-1.compute.amazonaws.com.cn
+* http://ec2-54-223-54-65.cn-north-1.compute.amazonaws.com.cn:8088/
+* 参考: http://docs.amazonaws.cn/ElasticMapReduce/latest/DeveloperGuide/emr-ssh-tunnel.html
