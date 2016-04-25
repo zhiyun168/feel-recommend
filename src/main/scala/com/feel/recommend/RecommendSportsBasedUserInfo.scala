@@ -46,7 +46,12 @@ object RecommendSportsBasedUserInfo {
     val fatRDD = sc.newAPIHadoopRDD(hadoopConf, classOf[com.mongodb.hadoop.MongoInputFormat], classOf[Object],
       classOf[BSONObject])
 
-    val userFatInfo = fatRDD.filter(x => x._2.get("device").toString.equalsIgnoreCase("picooc"))
+    val userFatInfo = fatRDD.filter(x => {
+      try {
+        x._2.get("device").toString.equalsIgnoreCase("picooc")
+      } catch {
+        case _: Throwable => false
+      }})
       .map(x => {
         val user = x._2.get("uid").toString
         val fatInfo = try {
@@ -70,7 +75,11 @@ object RecommendSportsBasedUserInfo {
     val sleepRDD = sc.newAPIHadoopRDD(hadoopConf, classOf[com.mongodb.hadoop.MongoInputFormat], classOf[Object],
       classOf[BSONObject])
 
-    val userSleepInfo = sleepRDD.filter(x => x._2.get("device").toString.equalsIgnoreCase("mi_band"))
+    val userSleepInfo = sleepRDD.filter(x => try {
+      x._2.get("device").toString.equalsIgnoreCase("mi_band")
+    } catch {
+      case _: Throwable => false
+    })
     .map(x => {
       val user = x._2.get("uid").toString
       val sleepInfo = try {
